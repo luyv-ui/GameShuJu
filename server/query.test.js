@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { answerQuery, searchGames } from './query.js';
+import { answerQuery, answerRankingQuery, rankingQueryType, searchGames } from './query.js';
 
 const games = [
   { name: '星露谷物语', englishName: 'Stardew Valley', genre: '模拟经营', developer: 'ConcernedApe', publisher: 'ConcernedApe', tags: ['农场'], platforms: ['PC'], releaseDate: '2016-02-26', rating: 98, price: 48, isDemo: true, sourceUrl: 'https://example.com' },
@@ -12,6 +12,15 @@ test('search matches name, developer, tags, genre and platform', () => {
   assert.equal(searchGames(games, '游戏科学')[0].name, '黑神话：悟空');
   assert.equal(searchGames(games, '', '模拟经营', 'PC')[0].name, '星露谷物语');
   assert.equal(searchGames(games, '', '模拟经营', 'PS5').length, 0);
+});
+
+test('search resolves common Chinese aliases and bot links to the matching web result', () => {
+  const entries = [{ name: 'Genshin Impact 6th Anniversary', englishName: 'Genshin Impact 6th Anniversary', genre: 'RPG', developer: 'COGNOSPHERE PTE. LTD.', publisher: '', tags: [], platforms: ['iOS'], channel: 'App', sourceUrl: 'https://apps.apple.com/test' }];
+  assert.equal(searchGames(entries, '原神')[0].name, 'Genshin Impact 6th Anniversary');
+  const answer = answerQuery(entries, '查询 原神', { webUrl: 'https://games.example.com' });
+  assert.match(answer, /Genshin Impact/);
+  assert.match(answer, /view=library/);
+  assert.match(answer, /q=Genshin/);
 });
 
 test('search filters product channel independently of genre and platform', () => {
@@ -38,7 +47,10 @@ test('bot supports operational commands and optional web link', () => {
   assert.match(answerQuery(games, '最近发布'), /黑神话：悟空/);
   assert.match(answerQuery(games, '最新公告'), /版本更新/);
   assert.match(answerQuery(games, '数据状态'), /1 款有 Steam 实采/);
-  assert.match(answerQuery(games, '@游戏信息助手 查询 黑神话', { webUrl: 'https://games.example.com' }), /网页情报库：https:\/\/games.example.com\//);
+  const linkedAnswer = answerQuery(games, '@游戏信息助手 查询 黑神话', { webUrl: 'https://games.example.com' });
+  assert.match(linkedAnswer, /查看对应数据：https:\/\/games.example.com\//);
+  assert.match(linkedAnswer, /view=library/);
+  assert.match(linkedAnswer, /q=/);
 });
 
 test('bot keeps zero metrics and separates App Store units from Steam metrics', () => {
@@ -54,4 +66,17 @@ test('bot keeps zero metrics and separates App Store units from Steam metrics', 
   assert.match(answerQuery(entries, 'Mobile Test'), /App Store 评分：4.5\/5.*美国区售价：US\$0/);
   assert.doesNotMatch(answerQuery(entries, 'Mobile Test'), /¥未录入/);
   assert.match(answerQuery(entries, 'Steam Test'), /好评率：0%.*中国区售价：¥0/);
+});
+
+test('bot answers WeChat mini-game rankings with top games and a matching page link', () => {
+  const data = { source: '腾讯应用宝微信小游戏榜单', boards: { bestSell: {
+    fetchedAt: '2026-10-03T09:12:35.408Z', error: null,
+    items: [{ rank: 1, name: '三国：冰河时代', developer: '测试厂商', tags: ['策略'] }, { rank: 2, name: '向僵尸开炮', developer: '', tags: [] }]
+  } } };
+  assert.equal(rankingQueryType('我想看近期微信畅销榜的榜单'), 'bestSell');
+  const answer = answerRankingQuery(data, '我想看近期微信畅销榜的榜单', { webUrl: 'https://games.example.com' });
+  assert.match(answer, /微信小游戏畅销榜/);
+  assert.match(answer, /1\. 三国：冰河时代/);
+  assert.match(answer, /view=rankings/);
+  assert.match(answer, /board=bestSell/);
 });

@@ -1,5 +1,5 @@
 import { DWClient, TOPIC_ROBOT } from 'dingtalk-stream';
-import { answerQuery } from './query.js';
+import { answerQuery, answerRankingQuery, rankingQueryType } from './query.js';
 
 const recentMessages = new Map();
 let activeClient;
@@ -32,14 +32,18 @@ function validWebhook(value) {
   } catch { return false; }
 }
 
-export async function handleRobotMessage(message, getGames) {
+export async function handleRobotMessage(message, getGames, getRankings) {
   const corpId = process.env.DINGTALK_CORP_ID;
   if (!message?.senderCorpId || message.senderCorpId !== message.chatbotCorpId || (corpId && message.senderCorpId !== corpId)) return;
   if (message.msgtype !== 'text' || !message.text?.content || !validWebhook(message.sessionWebhook)) return;
   if (!rememberMessage(message.msgId)) return;
   botStatus.lastMessageAt = new Date().toISOString();
   try {
-    const content = answerQuery(getGames(), message.text.content.slice(0, 120), { webUrl: process.env.PUBLIC_WEB_URL });
+    const input = message.text.content.slice(0, 120);
+    const rankingType = rankingQueryType(input);
+    const content = rankingType && getRankings
+      ? answerRankingQuery(await getRankings(), input, { webUrl: process.env.PUBLIC_WEB_URL })
+      : answerQuery(getGames(), input, { webUrl: process.env.PUBLIC_WEB_URL });
     const response = await fetch(message.sessionWebhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -55,7 +59,7 @@ export async function handleRobotMessage(message, getGames) {
   }
 }
 
-export async function startDingTalkBot(getGames) {
+export async function startDingTalkBot(getGames, getRankings) {
   const clientId = process.env.DINGTALK_CLIENT_ID;
   const clientSecret = process.env.DINGTALK_CLIENT_SECRET;
   botStatus.configured = Boolean(clientId && clientSecret);
@@ -69,7 +73,7 @@ export async function startDingTalkBot(getGames) {
     activeClient.socketCallBackResponse(event.headers.messageId, { status: 'SUCCESS' });
     try {
       const message = JSON.parse(event.data);
-      handleRobotMessage(message, getGames).catch(error => {
+      handleRobotMessage(message, getGames, getRankings).catch(error => {
         botStatus.lastError = error.message;
         console.error('DingTalk message error:', error);
       });

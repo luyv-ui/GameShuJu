@@ -13,6 +13,10 @@ import { apiUrl } from './api-url';
 
 type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare' | 'rankings' | 'profitBreakdown';
 type CatalogSyncStatus = { running?: boolean; finishedAt?: string; sources?: Record<string, { url: string; state: string; lastSuccessAt?: string; fetched?: number; added?: number; updated?: number; error?: string; warnings?: string[] }> };
+const initialParams = new URLSearchParams(window.location.search);
+const requestedView = initialParams.get('view');
+const initialView: View = requestedView && ['dashboard', 'projects', 'benchmark', 'risks', 'library', 'analytics', 'catalogCompare', 'rankings', 'profitBreakdown'].includes(requestedView)
+  ? requestedView as View : initialParams.get('q') ? 'library' : 'dashboard';
 const palette = ['#e9a236', '#37a89b', '#687dd8', '#e16f72', '#889db2', '#b37ac5'];
 const emptyGame: GameInput = { channel: '端游', name: '', englishName: '', genre: '', platforms: [], releaseDate: '', developer: '', publisher: '', price: null, rating: null, reviewCount: null, peakPlayers: null, tags: [], description: '', steamAppId: null, sourceUrl: '', isDemo: false };
 
@@ -141,12 +145,12 @@ export default function App() {
   const [requestedProjectId, setRequestedProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [view, setView] = useState<View>('dashboard');
-  const [query, setQuery] = useState('');
+  const [view, setView] = useState<View>(initialView);
+  const [query, setQuery] = useState(initialParams.get('q') || '');
   const [genre, setGenre] = useState('全部');
-  const [channel, setChannel] = useState('全部');
+  const [channel, setChannel] = useState(initialParams.get('channel') || '全部');
   const [platform, setPlatform] = useState('全部');
-  const [sort, setSort] = useState('rating');
+  const [sort, setSort] = useState(initialParams.get('sort') || 'rating');
   const [editing, setEditing] = useState<Game | null | 'new'>(null);
   const [compareA, setCompareA] = useState('1');
   const [compareB, setCompareB] = useState('2');

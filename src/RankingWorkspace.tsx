@@ -8,6 +8,8 @@ type Board = { label: string; url: string; items: RankingGame[]; fetchedAt: stri
 type RankingGroup = { label: string; scope: string; boards: Record<string, Board>; unavailable?: boolean; sourceUrl?: string };
 type RankingData = { source: string; boards: Record<'popular' | 'bestSell' | 'new', Board>; platforms: Record<string, RankingGroup> };
 const platformKeys = ['wechat', 'apple', 'taptap', 'douyin'];
+const requestedBoard = new URLSearchParams(window.location.search).get('board');
+const initialBoard = ['popular', 'bestSell', 'new'].includes(requestedBoard || '') ? requestedBoard as string : 'popular';
 
 function requestWithXhr(url: string): Promise<RankingData> {
   return new Promise((resolve, reject) => {
@@ -80,7 +82,7 @@ function GameIcon({ game }: { game: RankingGame }) {
 export default function RankingWorkspace({ mode }: { mode: 'boards' | 'breakdown' }) {
   const [data, setData] = useState<RankingData | null>(null);
   const [platform, setPlatform] = useState('wechat');
-  const [active, setActive] = useState('popular');
+  const [active, setActive] = useState(initialBoard);
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);

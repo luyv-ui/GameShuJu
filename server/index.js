@@ -128,4 +128,4 @@ if (process.env.STEAMCHARTS_SYNC_ENABLED !== 'false') {
   setTimeout(refreshPeaks, 30000).unref();
   setInterval(refreshPeaks, 24 * 60 * 60 * 1000).unref();
 }
-startDingTalkBot(listGames).catch(error => console.error('DingTalk bot failed:', error));
+startDingTalkBot(listGames, () => rankings.get()).catch(error => console.error('DingTalk bot failed:', error));
