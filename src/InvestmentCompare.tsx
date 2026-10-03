@@ -25,7 +25,7 @@ const sourceLabel = (game: Game) => {
 };
 const steam = (game: Game) => sourceLabel(game) === 'Steam';
 const appStore = (game: Game) => sourceLabel(game) === 'App Store 美国区';
-const scoped = (game: Game, field: 'price' | 'rating' | 'reviewCount' | 'peakPlayers') => steam(game) ? number(game[field], field === 'rating' ? '%' : field === 'price' ? ' 元' : '') : '不适用';
+const scoped = (game: Game, field: 'price' | 'rating' | 'reviewCount' | 'peakPlayers') => steam(game) ? field === 'price' && game.price != null ? `${game.metricScope?.includes('美元') ? '$' : '¥'}${game.price.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}` : number(game[field], field === 'rating' ? '%' : '') : '不适用';
 const appScoped = (game: Game, field: 'usPriceUsd' | 'usRatingOutOf5' | 'usRatingCount') => appStore(game) ? number(game.sourceExtras?.[field], field === 'usPriceUsd' ? ' 美元' : field === 'usRatingOutOf5' ? ' / 5' : '') : '不适用';
 
 function RadarPanel({ project, config }: { project: Project; config: ScoreConfig | null }) {
@@ -83,7 +83,7 @@ export default function InvestmentCompare({ projects, games, onOpenProject }: Pr
       { label: '月现金流衰减', project: percent(inputs.users.monthlyCashDecayPct), games: selectedGames.map(() => missing) }
     ] },
     { section: '公开商品信息 · 来源及口径见下方', rows: [
-      { label: 'Steam 中国区售价', project: '不适用', games: selectedGames.map(game => scoped(game, 'price')) },
+      { label: 'Steam 售价', project: '不适用', games: selectedGames.map(game => scoped(game, 'price')) },
       { label: 'Steam 好评率', project: '不适用', games: selectedGames.map(game => scoped(game, 'rating')) },
       { label: 'Steam 评价数', project: '不适用', games: selectedGames.map(game => scoped(game, 'reviewCount')) },
       { label: 'Steam 历史峰值在线', project: '不适用', games: selectedGames.map(game => scoped(game, 'peakPlayers')) },

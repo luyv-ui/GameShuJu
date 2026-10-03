@@ -4,7 +4,9 @@
 
 ## 自动更新
 
-服务启动约 10 秒后自动同步 Steam 搜索目录、Apple App Store 美国区搜索目录、Google Play 美国区游戏分类目录、TapTap 公开榜单商品页及腾讯应用宝微信小游戏目录，之后每 6 小时同步一次。管理员可在情报库点击“立即同步”；同步结果、失败来源和最近成功时间显示在页面顶部，也可读取 `GET /api/catalog-sync`。设置 `CATALOG_SYNC_ENABLED=false` 可关闭自动同步。同步状态保存在本机 `data/catalog-sync-status.json`，游戏仍按当前 JSON/SQLite 存储配置写入。
+服务启动约 10 秒后自动同步海外 Steam 搜索目录、Apple App Store 美国区搜索目录、TapTap 公开榜单商品页及腾讯应用宝微信小游戏目录，之后每 6 小时同步一次。Google Play 不再自动检测。管理员可在情报库点击“立即同步”；同步结果、失败来源和最近成功时间显示在页面顶部，也可读取 `GET /api/catalog-sync`。设置 `CATALOG_SYNC_ENABLED=false` 可关闭自动同步。同步状态保存在本机 `data/catalog-sync-status.json`，游戏仍按当前 JSON/SQLite 存储配置写入。
+
+Steam 专区采用“项目缓存优先、手动更新替换”的方式。`data/collected/steam-ranking-cache.json`、`data/collected/steam-ranking-history.json`、`data/collected/steam-game-details.json` 和 `data/collected/steam-overview.json` 是可版本化的数据资产，不属于应忽略的本机运行状态。页面只读取现有缓存，切换榜单、查看整体数据或打开游戏详情不会触发远程抓取；点击“更新数据”才批量刷新，并在成功后原子替换对应缓存。详情缓存以本次榜单 App ID 集合为准，榜单外旧项会被清理；历史榜单按地区和日期去重，最多保留 360 条。将更新后的缓存随代码提交后，其他电脑首次克隆即可直接使用同一份榜单、产品资料、具体评论和分析基础数据，无需先等待全量采集。
 
 采集按官方商品 ID 和来源链接更新；已有的可信数值不会被新目录记录中的 `null` 擦除，采集失败也不会删除旧数据。同步过程中各来源独立提交，部分分类失败会显示为“部分成功”。公开目录没有平台全量清单或实时推送承诺，因此“更新中”只表示周期性抓取；主机商店和抖音小游戏尚无稳定的自动采集接入，不能将当前库视为全球完整产品集。
 
@@ -18,7 +20,7 @@
 | Steam 搜索目录 | 商品名、类型标签、发售日、商品链接 | 目录记录的价格、评价、在线人数均为 `null` |
 | Apple App Store 美国区 | 商品名、类型、发售日、开发者；美元价格、五星评分和评分数仅放入 `sourceExtras` | 不和 Steam 好评率、价格直接比较；不可推断 iOS 收入 |
 | TapTap 公开榜单与商品页 | 榜单前列商品名、类型、开发者、商品链接 | 仅代表当次页面可见榜单；评分、下载量和收入暂未采集；不能当作国内手游全量 |
-| Google Play、主机官方商店、腾讯应用宝微信小游戏目录 | 已核验商品名、平台、链接及可见商品资料 | 未取得统一口径的投资指标时保持 `null`；腾讯目录不是微信全量，更不是抖音小游戏样本 |
+| 主机官方商店、腾讯应用宝微信小游戏目录 | 已核验商品名、平台、链接及可见商品资料 | 未取得统一口径的投资指标时保持 `null`；腾讯目录不是微信全量，更不是抖音小游戏样本 |
 
 每条记录保留 `sourceUrl`、`dataAsOf` 和 `metricScope`；Steam 评价另保留 `metricsSourceUrl`。快照顶层保留 UTC `fetchedAt`、`methodology`、`sources`、`limitations` 和 `failures`。导入器要求来源域名、商品 ID、日期及指标口径相符，并拒绝重复来源、采集失败、缺失的空值和未经核验的同时在线峰值。
 

@@ -10,15 +10,24 @@ import { getScoreConfig, putScoreConfig } from './score-config.js';
 import { generateInvestmentReport, renderInvestmentReportPdf } from './report.js';
 import { createAuth } from './auth.js';
 import { createCatalogSync } from './catalog-sync.js';
-import { createRankings } from './rankings.js';
+import { createRankings, enrichRankingCatalog, fillMissingRankingIcons } from './rankings.js';
 import { collectSteamCharts } from './steamcharts.js';
+import { createSteamGameDetail } from './steam-game-detail.js';
+import { createSteamOverview } from './steam-overview.js';
 
 const app = express();
 app.use(express.json({ limit: '8mb' }));
 app.use('/api/auth/exchange', express.urlencoded({ extended: false, limit: '4kb' }));
 const auth = createAuth();
-const catalogSync = createCatalogSync();
+const catalogSync = createCatalogSync({ getExistingGames: listGames });
 const rankings = createRankings();
+const steamGameDetail = createSteamGameDetail();
+const steamOverview = createSteamOverview();
+function listBotGames() {
+  const primary = listGames();
+  const knownSteamIds = new Set(primary.map(game => Number(game.steamAppId)).filter(Boolean));
+  return [...primary, ...steamGameDetail.catalogGames().filter(game => !knownSteamIds.has(Number(game.steamAppId)))];
+}
 auth.routes(app);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -35,8 +44,28 @@ app.get('/api/bot/status', (req, res) => {
 });
 app.get('/api/catalog-sync', auth.read, (req, res) => res.json(catalogSync.getStatus()));
 app.get('/api/rankings', auth.read, async (req, res) => {
-  try { res.json(await rankings.get(req.query.refresh === '1')); }
+  try {
+    const data = req.query.scope === 'steam' ? await rankings.refreshSteam(req.query.refresh === '1', String(req.query.region || 'global')) : await rankings.get(req.query.refresh === '1');
+    res.json(await fillMissingRankingIcons(enrichRankingCatalog(data, listGames())));
+  }
   catch { res.status(502).json({ error: '榜单暂时无法获取' }); }
+});
+app.get('/api/steam/games/:appid', auth.read, async (req, res) => {
+  try { res.json(await steamGameDetail.get(req.params.appid, req.query.refresh === '1')); }
+  catch (error) { res.status(error?.status || 502).json({ error: error instanceof Error ? error.message : 'Steam 游戏资料暂时无法获取' }); }
+});
+app.get('/api/steam/overview', auth.read, async (req, res) => {
+  try { res.json({ platform: await steamOverview.get(req.query.refresh === '1'), sample: steamGameDetail.overview() }); }
+  catch (error) { res.status(502).json({ error: error instanceof Error ? error.message : 'Steam 整体数据暂时无法获取' }); }
+});
+app.post('/api/steam/game-cache/refresh', auth.admin, async (req, res) => {
+  try {
+    const appIds = Array.isArray(req.body?.appIds) ? req.body.appIds.slice(0, 800) : [];
+    if (!appIds.length) return res.status(400).json({ error: '没有可更新的 Steam 游戏' });
+    res.json(await steamGameDetail.warm(appIds, { force: true, concurrency: 5, replace: true }));
+  } catch (error) {
+    res.status(502).json({ error: error instanceof Error ? error.message : 'Steam 游戏缓存更新失败' });
+  }
 });
 app.post('/api/catalog-sync', auth.admin, (req, res) => {
   if (catalogSync.getStatus().running) return res.status(409).json({ error: '同步正在进行' });
@@ -128,4 +157,11 @@ if (process.env.STEAMCHARTS_SYNC_ENABLED !== 'false') {
   setTimeout(refreshPeaks, 30000).unref();
   setInterval(refreshPeaks, 24 * 60 * 60 * 1000).unref();
 }
-startDingTalkBot(listGames, () => rankings.get()).catch(error => console.error('DingTalk bot failed:', error));
+if (process.env.STEAM_RANKINGS_SYNC_ENABLED !== 'false') {
+  const refreshSteamRankings = () => void Promise.all(['global', 'CN', 'US', 'JP'].map(region => rankings.refreshSteam(true, region)))
+    .catch(error => console.error('Steam rankings sync failed:', error));
+  setTimeout(refreshSteamRankings, 5000).unref();
+  setInterval(refreshSteamRankings, 30 * 60 * 1000).unref();
+}
+startDingTalkBot(listBotGames, () => rankings.get(), appId => steamGameDetail.peek(appId), () => steamGameDetail.overview())
+  .catch(error => console.error('DingTalk bot failed:', error));

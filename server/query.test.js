@@ -50,6 +50,8 @@ test('bot answer labels demo data and handles empty results', () => {
 test('bot supports operational commands and optional web link', () => {
   assert.match(answerQuery(games, '帮助'), /当前在线/);
   assert.match(answerQuery(games, '当前在线'), /13,468/);
+  assert.match(answerQuery(games, '本周最热门的游戏是什么？'), /尚未采集完整周热度.*黑神话：悟空：13,468/s);
+  assert.doesNotMatch(answerQuery(games, '本周最热门的游戏是什么？'), /未找到/);
   assert.match(answerQuery(games, '最近发布'), /黑神话：悟空/);
   assert.match(answerQuery(games, '最新公告'), /版本更新/);
   assert.match(answerQuery(games, '数据状态'), /1 款有 Steam 实采/);
@@ -71,7 +73,7 @@ test('bot keeps zero metrics and separates App Store units from Steam metrics', 
   }];
   assert.match(answerQuery(entries, 'Mobile Test'), /App Store 评分：4.5\/5.*美国区售价：US\$0/);
   assert.doesNotMatch(answerQuery(entries, 'Mobile Test'), /¥未录入/);
-  assert.match(answerQuery(entries, 'Steam Test'), /好评率：0%.*中国区售价：¥0/);
+  assert.match(answerQuery(entries, 'Steam Test'), /好评率：0%.*Steam 售价：¥0/);
 });
 
 test('bot answers WeChat mini-game rankings with top games and a matching page link', () => {
@@ -85,4 +87,36 @@ test('bot answers WeChat mini-game rankings with top games and a matching page l
   assert.match(answer, /1\. 三国：冰河时代/);
   assert.match(answer, /view=rankings/);
   assert.match(answer, /board=bestSell/);
+});
+
+test('bot enriches a Steam game answer from the local detail cache', () => {
+  const steamGame = { ...games[0], steamAppId: 413150, isDemo: false, sourceUrl: 'https://store.steampowered.com/app/413150/' };
+  const detail = {
+    appId: 413150, capturedAt: '2026-10-03T21:08:19.732Z',
+    product: { name: 'Stardew Valley', shortDescription: '经营农场并认识鹈鹕镇居民。', developers: ['ConcernedApe'], publishers: ['ConcernedApe'],
+      releaseDate: '2016 年 2 月 26 日', comingSoon: false, price: { text: '$10.49', originalText: '$14.99', discountPercent: 30 },
+      genres: ['独立', '模拟'], categories: ['单人', '多人'], platforms: ['Windows', 'macOS'], metacritic: 89,
+      pcRequirements: { minimum: '需要 2 GB 内存', recommended: '需要 4 GB 内存' } },
+    reviews: { summary: { total: 218323, positivePercent: 98, score: '好评如潮' },
+      items: [{ recommended: true, playtimeForeverHours: 20 }, { recommended: false, playtimeForeverHours: 40 }] },
+    players: { current: 51789, history: [{ capturedAt: '2026-10-03T20:00:00.000Z', count: 40000 }, { capturedAt: '2026-10-03T21:00:00.000Z', count: 60000 }] },
+    sources: { product: 'https://store.steampowered.com/app/413150/?l=schinese' }
+  };
+  const answer = answerQuery([steamGame], '星露谷配置和口碑怎么样', { getSteamDetail: () => detail });
+  assert.match(answer, /Steam 情报/);
+  assert.match(answer, /优惠 30%/);
+  assert.match(answer, /好评如潮.*218,323 条/s);
+  assert.match(answer, /当前 51,789.*缓存均值 50,000/s);
+  assert.match(answer, /有效 2 条.*累计时长中位数 30 小时/s);
+  assert.match(answer, /最低配置：需要 2 GB 内存/);
+});
+
+test('bot reports Steam cache coverage without inventing market data', () => {
+  const answer = answerQuery(games, 'Steam现在有什么数据？', { getSteamOverview: () => ({
+    capturedAt: '2026-10-03T21:08:19.732Z', coverage: { products: 380, reviews: 350, players: 300, reviewSamples: 22202 },
+    playerMarket: { onlineLeaders: [{ name: '示例游戏', current: 12345, positivePercent: 91 }] }
+  }) });
+  assert.match(answer, /商品详情：380 款/);
+  assert.match(answer, /22,202 条/);
+  assert.match(answer, /示例游戏：当前 12,345/);
 });

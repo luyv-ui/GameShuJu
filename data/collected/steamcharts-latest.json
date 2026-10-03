@@ -186,6 +186,30 @@
       "peakPlayers": 11071,
       "sourceUrl": "https://steamcharts.com/app/391540",
       "capturedAt": "2026-10-03T09:10:12.648Z"
+    },
+    {
+      "steamAppId": 3231480,
+      "peakPlayers": 43,
+      "sourceUrl": "https://steamcharts.com/app/3231480",
+      "capturedAt": "2026-10-03T21:34:34.297Z"
+    },
+    {
+      "steamAppId": 3200810,
+      "peakPlayers": 6,
+      "sourceUrl": "https://steamcharts.com/app/3200810",
+      "capturedAt": "2026-10-03T21:34:34.643Z"
+    },
+    {
+      "steamAppId": 4285110,
+      "peakPlayers": 479,
+      "sourceUrl": "https://steamcharts.com/app/4285110",
+      "capturedAt": "2026-10-03T21:34:48.201Z"
+    },
+    {
+      "steamAppId": 4364930,
+      "peakPlayers": 723,
+      "sourceUrl": "https://steamcharts.com/app/4364930",
+      "capturedAt": "2026-10-03T21:35:04.456Z"
     }
   ]
 }

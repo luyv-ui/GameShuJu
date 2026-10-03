@@ -163,6 +163,8 @@ export function validateGame(input) {
   };
   const url = checkedUrl(input.sourceUrl, '来源链接');
   const metricsUrl = checkedUrl(input.metricsSourceUrl, '指标来源链接');
+  const iconUrl = checkedUrl(input.iconUrl, '图标链接');
+  if (iconUrl && !iconUrl.startsWith('https://')) throw new Error('图标链接必须使用 https://');
   const platforms = Array.isArray(input.platforms) ? input.platforms : [];
   const tags = Array.isArray(input.tags) ? input.tags : [];
   const steamAppId = input.steamAppId === null || input.steamAppId === undefined || input.steamAppId === ''
@@ -182,6 +184,7 @@ export function validateGame(input) {
     peakPlayers: numeric('peakPlayers', 1000000000),
     tags: tags.map(String).map(x => x.trim()).filter(Boolean).slice(0, 12),
     description: String(input.description || '').trim().slice(0, 1000),
+    iconUrl,
     sourceUrl: url,
     metricsSourceUrl: metricsUrl,
     dataAsOf: checkedDate(input.dataAsOf, '采集日期'),
@@ -238,6 +241,7 @@ export function importGames(document, { refreshExisting = false } = {}) {
         } else if (refreshExisting && game.sourceUrl && gameKeys(games[index]).some(key => identities.includes(key) && key !== `name:${game.name.trim().toLocaleLowerCase()}:${[...game.platforms].map(x => x.toLocaleLowerCase()).sort().join(',')}`) &&
           game.dataAsOf && game.dataAsOf >= (games[index].dataAsOf || '')) {
           const previous = games[index];
+          const steamDetailMissing = Boolean(game.steamAppId && !game.developer && previous.developer);
           const retainedSteamMetrics = ['price', 'rating', 'reviewCount', 'peakPlayers'].some(field =>
             game[field] === null && previous[field] !== null && previous[field] !== undefined);
           const extras = game.sourceExtras && previous.sourceExtras
@@ -245,8 +249,10 @@ export function importGames(document, { refreshExisting = false } = {}) {
               [key, game.sourceExtras[key] ?? previous.sourceExtras[key] ?? null]))
             : game.sourceExtras ?? previous.sourceExtras;
           const next = { ...previous, ...game,
+            name: steamDetailMissing && game.name === game.englishName ? previous.name : game.name,
             genre: game.genre === '未分类' ? previous.genre : game.genre,
             englishName: game.englishName || previous.englishName,
+            platforms: steamDetailMissing && previous.platforms.length > game.platforms.length ? previous.platforms : game.platforms,
             price: game.price ?? previous.price,
             rating: game.rating ?? previous.rating,
             reviewCount: game.reviewCount ?? previous.reviewCount,
@@ -258,6 +264,7 @@ export function importGames(document, { refreshExisting = false } = {}) {
             developer: game.developer || previous.developer,
             publisher: game.publisher || previous.publisher,
             description: game.description || previous.description,
+            iconUrl: steamDetailMissing ? previous.iconUrl || game.iconUrl : game.iconUrl || previous.iconUrl,
             tags: game.tags.length ? game.tags : previous.tags,
             updatedAt: now };
           if (JSON.stringify({ ...next, updatedAt: '' }) !== JSON.stringify({ ...previous, updatedAt: '' })) {

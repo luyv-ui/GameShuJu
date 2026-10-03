@@ -32,6 +32,7 @@ export type Game = {
   peakPlayers: number | null;
   tags: string[];
   description: string;
+  iconUrl?: string;
   steamAppId: number | null;
   sourceUrl: string;
   metricsSourceUrl?: string;

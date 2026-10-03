@@ -50,10 +50,80 @@ function formatNumber(value) {
   return Number(value || 0).toLocaleString('zh-CN');
 }
 
-function formatGame(game) {
+function formatDateTime(value) {
+  if (!value || Number.isNaN(Date.parse(value))) return '';
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  }).format(new Date(value));
+}
+
+function shorten(value, limit = 150) {
+  const text = String(value || '').replace(/\s+/gu, ' ').trim();
+  return text.length > limit ? `${text.slice(0, limit).trim()}…` : text;
+}
+
+function median(values) {
+  const numbers = values.map(Number).filter(Number.isFinite).sort((left, right) => left - right);
+  if (!numbers.length) return null;
+  const middle = Math.floor(numbers.length / 2);
+  return numbers.length % 2 ? numbers[middle] : Math.round((numbers[middle - 1] + numbers[middle]) / 2 * 10) / 10;
+}
+
+function formatSteamDetail(game, detail, input = '') {
+  const product = detail.product || {};
+  const review = detail.reviews?.summary || {};
+  const samples = detail.reviews?.items || [];
+  const history = (detail.players?.history || []).filter(point => Number.isFinite(Number(point.count)));
+  const current = Number.isFinite(Number(detail.players?.current)) ? Number(detail.players.current) : game.currentPlayers;
+  const average = history.length ? Math.round(history.reduce((sum, point) => sum + Number(point.count), 0) / history.length) : null;
+  const peak = history.length ? Math.max(...history.map(point => Number(point.count))) : null;
+  const trend = current != null && average
+    ? current >= average * 1.1 ? `高于缓存均值 ${Math.round((current / average - 1) * 100)}%`
+      : current <= average * 0.9 ? `低于缓存均值 ${Math.round((1 - current / average) * 100)}%` : '接近缓存均值'
+    : '';
+  const recommendedSamples = samples.filter(item => item.recommended).length;
+  const playtimeMedian = median(samples.map(item => item.playtimeForeverHours));
+  const productName = product.name && compactName(product.name) !== compactName(game.name) ? ` / ${product.name}` : '';
+  const price = product.price?.text || (game.price != null ? String(game.price) : '暂未公布');
+  const originalPrice = product.price?.originalText && product.price.originalText !== price ? `（原价 ${product.price.originalText}）` : '';
+  const discount = Number(product.price?.discountPercent || 0) > 0 ? `，优惠 ${product.price.discountPercent}%` : '';
+  const genres = (product.genres?.length ? product.genres : [game.genre]).filter(Boolean).slice(0, 4);
+  const platforms = (product.platforms?.length ? product.platforms : game.platforms || []).filter(Boolean);
+  const makers = [...(product.developers || []), ...(product.publishers || [])].filter((value, index, values) => value && values.indexOf(value) === index).slice(0, 3);
+  const lines = [
+    `${game.name}${productName}｜Steam 情报`,
+    `类型：${genres.join('、') || '未录入'}｜平台：${platforms.join('、') || '未录入'}`,
+    makers.length ? `开发/发行：${makers.join('、')}` : '',
+    `价格：${price}${originalPrice}${discount}｜发售：${product.comingSoon ? '即将推出' : product.releaseDate || game.releaseDate || '未录入'}`,
+    review.positivePercent != null
+      ? `Steam 口碑：${review.score || '已有评测'}｜好评 ${review.positivePercent}%｜${formatNumber(review.total)} 条简体中文公开评测`
+      : 'Steam 口碑：当前缓存暂无可用评测汇总',
+    product.metacritic != null ? `Metacritic：${product.metacritic}` : '',
+    current != null ? `玩家在线：当前 ${formatNumber(current)}${average != null ? `｜缓存均值 ${formatNumber(average)}` : ''}${peak != null ? `｜缓存峰值 ${formatNumber(peak)}` : ''}${trend ? `｜${trend}` : ''}` : '',
+    samples.length ? `评论样本：有效 ${samples.length} 条｜推荐 ${recommendedSamples} / 不推荐 ${samples.length - recommendedSamples}${playtimeMedian != null ? `｜玩家累计时长中位数 ${playtimeMedian} 小时` : ''}` : '',
+    product.shortDescription ? `简介：${shorten(product.shortDescription)}` : ''
+  ];
+  if (/(配置|电脑|显卡|带得动|最低要求|推荐要求|系统要求)/u.test(input)) {
+    lines.push(product.pcRequirements?.minimum ? `最低配置：${shorten(product.pcRequirements.minimum, 260)}` : '最低配置：Steam 当前未提供');
+    if (product.pcRequirements?.recommended) lines.push(`推荐配置：${shorten(product.pcRequirements.recommended, 260)}`);
+  }
+  if (/(玩法|功能|单人|多人|联机|控制器|手柄)/u.test(input) && product.categories?.length) {
+    lines.push(`产品功能：${product.categories.slice(0, 8).join('、')}`);
+  }
+  lines.push(
+    detail.capturedAt ? `数据采集：${formatDateTime(detail.capturedAt)}` : '',
+    '口径：价格为采集区服商店价；在线趋势来自缓存时段，不代表销量或独立用户。',
+    detail.sources?.product || game.sourceUrl ? `来源：${detail.sources?.product || game.sourceUrl}` : ''
+  );
+  return lines.filter(Boolean).join('\n');
+}
+
+function formatGame(game, detail = null, input = '') {
+  if (game.steamAppId && detail?.product) return formatSteamDetail(game, detail, input);
   const metrics = [];
   if (game.rating != null) metrics.push(`好评率：${game.rating}%`);
-  if (game.price != null) metrics.push(`${game.steamAppId ? '中国区售价' : '售价'}：${game.steamAppId ? '¥' : ''}${game.price}`);
+  if (game.price != null) metrics.push(`${game.steamAppId ? 'Steam 售价' : '售价'}：${game.steamAppId && game.metricScope?.includes('美元') ? 'US$' : game.steamAppId ? '¥' : ''}${game.price}`);
   if (game.sourceExtras?.usRatingOutOf5 != null) metrics.push(`App Store 评分：${game.sourceExtras.usRatingOutOf5}/5`);
   if (game.sourceExtras?.usPriceUsd != null) metrics.push(`美国区售价：US$${game.sourceExtras.usPriceUsd}`);
   const live = game.hasLiveData
@@ -143,6 +213,12 @@ export function answerRankingQuery(data, input, options = {}) {
 export function answerQuery(games, input, options = {}) {
   const { original, text, compact } = normalizedRequest(input);
   const withLink = (content, params) => appendWebLink(content, options.webUrl, params);
+  const detailFor = game => {
+    if (!game?.steamAppId || typeof options.getSteamDetail !== 'function') return null;
+    try { return options.getSteamDetail(game.steamAppId) || null; }
+    catch { return null; }
+  };
+  const format = game => formatGame(game, detailFor(game), original);
 
   if (!text || /^(帮助|菜单|help|\?)$/iu.test(text)) {
     return withLink('游戏信息助手已就绪。可直接问：\n• 查询 黑神话或原神\n• 当前在线 / 黑神话现在多少人在线\n• 近期发布的热门游戏\n• 最新公告\n• 数据状态\n\n只根据已入库数据回答；未采集的平台会明确说明。', { view: 'library' });
@@ -152,6 +228,23 @@ export function answerQuery(games, input, options = {}) {
     return withLink('当前运行库没有可核验的抖音小游戏榜单数据，因此无法确认畅销榜或热门榜排名。现有 App 和 Steam 数据不能替代抖音小游戏数据。', { view: 'library', channel: '小游戏' });
   }
 
+  if (/steam/i.test(original) && /(数据|覆盖|资料|情况|状态|有什么|多少)/u.test(compact) && typeof options.getSteamOverview === 'function') {
+    const overview = options.getSteamOverview();
+    const coverage = overview?.coverage || {};
+    const leaders = overview?.playerMarket?.onlineLeaders || [];
+    const top = leaders.slice(0, 5).map((game, index) => `${index + 1}. ${game.name}：当前 ${formatNumber(game.current)}${game.positivePercent != null ? `｜好评 ${game.positivePercent}%` : ''}`);
+    return withLink([
+      'Steam 数据覆盖状态',
+      `商品详情：${formatNumber(coverage.products)} 款｜有评测汇总：${formatNumber(coverage.reviews)} 款｜有在线数据：${formatNumber(coverage.players)} 款`,
+      `有效中文评论样本：${formatNumber(coverage.reviewSamples)} 条`,
+      overview?.capturedAt ? `最近采集：${formatDateTime(overview.capturedAt)}` : '',
+      top.length ? '\n当前在线前列：' : '',
+      ...top,
+      '',
+      '说明：回答只使用本项目已采集的 Steam 商品、评测与在线缓存。'
+    ].filter(value => value !== '').join('\n'), { view: 'steam' });
+  }
+
   if (/^(数据状态|采集状态|状态)$/u.test(text)) {
     const liveGames = games.filter(game => game.hasLiveData);
     const latestCapture = liveGames.map(game => game.steamCapturedAt || '').sort().at(-1);
@@ -159,16 +252,19 @@ export function answerQuery(games, input, options = {}) {
     return withLink(`情报库共 ${games.length} 款游戏：端游 ${counts.端游 || 0}、App ${counts.App || 0}、小游戏 ${counts.小游戏 || 0}。其中 ${liveGames.length} 款有 Steam 实采数据。${latestCapture ? `\n最近采集：${latestCapture}` : '\n尚未生成实时采集快照。'}`, { view: 'library' });
   }
 
-  if (!recentReleaseIntent(compact) && (/(当前在线|在线人数|在线排行|现在.*在线|谁.*最热|热门游戏|热度排行)/u.test(compact) || compact === '热门')) {
+  if (!recentReleaseIntent(compact) && (/(当前在线|在线人数|在线排行|现在.*在线|谁.*最热|最?热门(?:的)?游戏|本周.*热门|最近.*热门|哪些游戏.*热|热度排行)/u.test(compact) || compact === '热门')) {
     const gameQuery = original.replace(/(请问|麻烦|请|帮我|查询|查一下|查|现在|当前|有|多少|人|在线人数|在线|情况|怎么样|？|\?)/gu, '').trim();
     if (gameQuery) {
       const match = searchGames(games, gameQuery).find(game => game.hasLiveData);
-      if (match) return withLink(formatGame(match), { view: 'library', q: match.name });
+      if (match) return withLink(format(match), { view: 'library', q: match.name });
     }
     const liveGames = games.filter(game => game.hasLiveData && Number.isFinite(Number(game.currentPlayers)))
       .sort((left, right) => Number(right.currentPlayers) - Number(left.currentPlayers)).slice(0, 5);
     if (!liveGames.length) return withLink('目前没有在线人数实采数据，请先运行 Steam 采集任务。');
-    return withLink(`Steam 当前在线排行：\n${liveGames.map((game, index) => `${index + 1}. ${game.name}：${formatNumber(game.currentPlayers)}`).join('\n')}\n注：这是采集时刻快照，不是历史峰值。`, { view: 'analytics' });
+    const scope = /(本周|这周|一周)/u.test(compact)
+      ? '当前库尚未采集完整周热度，以下按最近一次 Steam 在线人数排序：'
+      : 'Steam 当前在线排行：';
+    return withLink(`${scope}\n${liveGames.map((game, index) => `${index + 1}. ${game.name}：${formatNumber(game.currentPlayers)}`).join('\n')}\n注：这是采集时刻快照，不是历史峰值。`, { view: 'analytics' });
   }
 
   if (recentReleaseIntent(compact)) {
@@ -187,18 +283,20 @@ export function answerQuery(games, input, options = {}) {
 
   const opinionGameName = gameOpinionRequest(text);
   if (opinionGameName) {
-    const match = searchGames(games, opinionGameName)[0] || mentionedGames(games, original)[0];
+    const match = mentionedGames(games, original)[0] || searchGames(games, opinionGameName)[0];
     if (!match) return withLink(`未找到“${opinionGameName}”。当前查询只依据已入库数据，未入库内容不会编造。`, { view: 'library', q: opinionGameName });
-    const assessment = match.rating != null
-      ? `从已入库指标看，${match.name}当前好评率为 ${match.rating}%，可作为口碑参考；是否适合你仍取决于个人玩法偏好。`
+    const steamDetail = detailFor(match);
+    const positivePercent = steamDetail?.reviews?.summary?.positivePercent ?? match.rating;
+    const assessment = positivePercent != null
+      ? `从已入库指标看，${match.name}当前好评率为 ${positivePercent}%，可作为口碑参考；是否适合你仍取决于个人玩法偏好。`
       : `情报库中有${match.name}的资料，但暂未取得可用于判断口碑的评分数据。`;
-    return withLink(`${assessment}\n\n${formatGame(match)}`, { view: 'library', q: match.name });
+    return withLink(`${assessment}\n\n${formatGame(match, steamDetail, original)}`, { view: 'library', q: match.name });
   }
 
   const mentioned = mentionedGames(games, original).slice(0, 5);
-  if (mentioned.length) return withLink(mentioned.map(formatGame).join('\n\n'), { view: 'library', q: mentioned[0].name });
+  if (mentioned.length) return withLink(mentioned.map(format).join('\n\n'), { view: 'library', q: mentioned[0].name });
 
   const matches = searchGames(games, text).slice(0, 5);
   if (!matches.length) return withLink(`未找到“${text}”。当前查询支持游戏中文别名、商店名称、开发商和标签；未入库数据不会编造。`, { view: 'library', q: text });
-  return withLink(matches.map(formatGame).join('\n\n'), { view: 'library', q: matches[0].name });
+  return withLink(matches.map(format).join('\n\n'), { view: 'library', q: matches[0].name });
 }

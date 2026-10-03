@@ -48,7 +48,7 @@ export function prepareVerifiedSnapshot(document) {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('记录不是对象');
       if (!raw.sourceUrl || !raw.dataAsOf || !raw.metricScope) throw new Error('缺少来源、采集日期或指标口径');
       if (raw.dataAsOf !== fetchedAt.slice(0, 10)) throw new Error('采集日期与快照不符');
-      if (!Array.isArray(raw.platforms) || raw.platforms.length !== 1) throw new Error('必须明确唯一平台');
+      if (!Array.isArray(raw.platforms) || !raw.platforms.length) throw new Error('必须明确平台');
       if (measuredFields.some(field => raw[field] === undefined)) throw new Error('指标缺失，请用 null 表示未采集');
       if (raw.isDemo) throw new Error('真实采集快照不能包含演示数据');
       const url = new URL(raw.sourceUrl);
@@ -58,17 +58,20 @@ export function prepareVerifiedSnapshot(document) {
       seen.add(identity);
 
       if (url.hostname === 'store.steampowered.com') {
-        if (raw.platforms[0] !== 'PC') throw new Error('Steam 平台口径无效');
+        if (!raw.platforms.includes('PC') || raw.platforms.some(platform => !['PC', 'macOS', 'Linux'].includes(platform))) throw new Error('Steam 平台口径无效');
         const hasReviewMetric = raw.rating !== null || raw.reviewCount !== null;
         if (hasReviewMetric) {
           const metricUrl = new URL(raw.metricsSourceUrl);
+          const reviewValuesValid = (raw.reviewCount === 0 && raw.rating === null) ||
+            (raw.reviewCount !== null && raw.rating !== null);
           if (metricUrl.protocol !== 'https:' || metricUrl.hostname !== 'store.steampowered.com' ||
               !metricUrl.pathname.startsWith(`/appreviews/${raw.steamAppId}`) ||
-              raw.rating === null || raw.reviewCount === null) throw new Error('Steam 评价来源或数值不完整');
+              !reviewValuesValid) throw new Error('Steam 评价来源或数值不完整');
         }
-        if (raw.price !== null && !raw.metricScope.includes('人民币')) throw new Error('Steam 价格缺少币种口径');
+        if (raw.price !== null && !/(人民币|美元)/.test(raw.metricScope)) throw new Error('Steam 价格缺少币种口径');
         if (raw.peakPlayers !== null) throw new Error('当前采集器未核验同时在线峰值');
       } else {
+        if (raw.platforms.length !== 1) throw new Error('非 Steam 来源必须明确唯一平台');
         if (measuredFields.some(field => raw[field] !== null)) throw new Error('非 Steam 公共指标必须为 null');
         if (raw.metricsSourceUrl) throw new Error('非 Steam 指标来源不应填入');
         if (url.hostname === 'apps.apple.com') {

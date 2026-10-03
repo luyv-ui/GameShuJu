@@ -21,11 +21,14 @@ function withTemporaryStore(run) {
 }
 
 test('missing metrics stay missing instead of becoming zero', () => {
-  const game = validateGame({ name: '样本', genre: '解谜', price: null, rating: null, reviewCount: null, peakPlayers: null });
+  const game = validateGame({ name: '样本', genre: '解谜', price: null, rating: null, reviewCount: null, peakPlayers: null,
+    iconUrl: 'https://example.com/icon.png' });
   assert.equal(game.price, null);
   assert.equal(game.rating, null);
   assert.equal(game.reviewCount, null);
   assert.equal(game.peakPlayers, null);
+  assert.equal(game.iconUrl, 'https://example.com/icon.png');
+  assert.throws(() => validateGame({ name: '样本', genre: '解谜', iconUrl: 'http://example.com/icon.png' }), /https/);
 });
 
 test('import rejects records without a source before changing the library', () => {

@@ -32,7 +32,7 @@ function validWebhook(value) {
   } catch { return false; }
 }
 
-export async function handleRobotMessage(message, getGames, getRankings) {
+export async function handleRobotMessage(message, getGames, getRankings, getSteamDetail, getSteamOverview) {
   const corpId = process.env.DINGTALK_CORP_ID;
   if (!message?.senderCorpId || message.senderCorpId !== message.chatbotCorpId || (corpId && message.senderCorpId !== corpId)) return;
   if (message.msgtype !== 'text' || !message.text?.content || !validWebhook(message.sessionWebhook)) return;
@@ -43,7 +43,7 @@ export async function handleRobotMessage(message, getGames, getRankings) {
     const rankingType = rankingQueryType(input);
     const content = rankingType && getRankings
       ? answerRankingQuery(await getRankings(), input, { webUrl: process.env.PUBLIC_WEB_URL })
-      : answerQuery(getGames(), input, { webUrl: process.env.PUBLIC_WEB_URL });
+      : answerQuery(getGames(), input, { webUrl: process.env.PUBLIC_WEB_URL, getSteamDetail, getSteamOverview });
     const response = await fetch(message.sessionWebhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -59,7 +59,7 @@ export async function handleRobotMessage(message, getGames, getRankings) {
   }
 }
 
-export async function startDingTalkBot(getGames, getRankings) {
+export async function startDingTalkBot(getGames, getRankings, getSteamDetail, getSteamOverview) {
   const clientId = process.env.DINGTALK_CLIENT_ID;
   const clientSecret = process.env.DINGTALK_CLIENT_SECRET;
   botStatus.configured = Boolean(clientId && clientSecret);
@@ -73,7 +73,7 @@ export async function startDingTalkBot(getGames, getRankings) {
     activeClient.socketCallBackResponse(event.headers.messageId, { status: 'SUCCESS' });
     try {
       const message = JSON.parse(event.data);
-      handleRobotMessage(message, getGames, getRankings).catch(error => {
+      handleRobotMessage(message, getGames, getRankings, getSteamDetail, getSteamOverview).catch(error => {
         botStatus.lastError = error.message;
         console.error('DingTalk message error:', error);
       });
