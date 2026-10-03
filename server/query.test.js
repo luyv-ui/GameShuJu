@@ -38,6 +38,7 @@ test('bot supports operational commands and optional web link', () => {
   assert.match(answerQuery(games, '最近发布'), /黑神话：悟空/);
   assert.match(answerQuery(games, '最新公告'), /版本更新/);
   assert.match(answerQuery(games, '数据状态'), /1 款有 Steam 实采/);
+  assert.match(answerQuery(games, '今日日报', { webUrl: 'https://games.example.com' }), /查看完整报告：https:\/\/games\.example\.com\/reports\/\d{4}-\d{2}-\d{2}/);
   assert.match(answerQuery(games, '@游戏信息助手 查询 黑神话', { webUrl: 'https://games.example.com' }), /网页情报库：https:\/\/games.example.com\//);
 });
 

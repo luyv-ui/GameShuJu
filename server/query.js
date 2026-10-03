@@ -1,3 +1,5 @@
+import { dailyReportText } from './report.js';
+
 export function searchGames(games, query = '', genre = '全部', platform = '全部', channel = '全部') {
   const keyword = String(query).trim().toLocaleLowerCase();
   return games.filter(game => {
@@ -46,7 +48,11 @@ export function answerQuery(games, input, options = {}) {
   const withLink = content => appendWebLink(content, options.webUrl);
 
   if (!text || /^(帮助|菜单|help|\?)$/iu.test(text)) {
-    return withLink('游戏信息助手已就绪。可发送：\n• 查询 黑神话\n• 当前在线\n• 最近发布\n• 最新公告\n• 数据状态');
+    return withLink('游戏信息助手已就绪。可发送：\n• 今日日报\n• 查询 黑神话\n• 当前在线\n• 最近发布\n• 最新公告\n• 数据状态');
+  }
+
+  if (/^(今日日报|今日简报|日报)$/u.test(text)) {
+    return dailyReportText(games, { webUrl: options.webUrl });
   }
 
   if (/^(数据状态|采集状态|状态)$/u.test(text)) {

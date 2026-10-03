@@ -7,6 +7,7 @@ import { searchGames } from './query.js';
 import { getDingTalkBotStatus, startDingTalkBot } from './dingtalk.js';
 import { listProjects, createProject, updateProject, deleteProject } from './projects.js';
 import { getScoreConfig, putScoreConfig } from './score-config.js';
+import { buildDailyReport, renderDailyReportHtml } from './report.js';
 
 const app = express();
 app.use(express.json({ limit: '8mb' }));
@@ -19,6 +20,14 @@ app.get('/api/games', (req, res) => {
 });
 app.get('/api/bot/status', (req, res) => {
   res.json(getDingTalkBotStatus());
+});
+app.get('/api/reports/:date', (req, res) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(req.params.date)) return res.status(400).json({ error: '日期格式应为 YYYY-MM-DD' });
+  res.json(buildDailyReport(listGames(), req.params.date));
+});
+app.get('/reports/:date', (req, res) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(req.params.date)) return res.status(400).send('日期格式应为 YYYY-MM-DD');
+  res.type('html').send(renderDailyReportHtml(buildDailyReport(listGames(), req.params.date)));
 });
 app.post('/api/games', (req, res) => {
   try { res.status(201).json(createGame(req.body)); }
