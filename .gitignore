@@ -2,5 +2,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 data/games.json
+data/projects.json
+data/score-config.json
 .env
 .DS_Store

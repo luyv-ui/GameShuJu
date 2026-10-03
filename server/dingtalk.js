@@ -4,6 +4,7 @@ import { answerQuery } from './query.js';
 const recentMessages = new Map();
 
 function rememberMessage(id) {
+  if (!id) return true;
   const now = Date.now();
   for (const [key, time] of recentMessages) if (now - time > 10 * 60 * 1000) recentMessages.delete(key);
   if (recentMessages.has(id)) return false;
@@ -20,16 +21,21 @@ function validWebhook(value) {
 
 export async function handleRobotMessage(message, getGames) {
   const corpId = process.env.DINGTALK_CORP_ID;
-  if (!message.senderCorpId || message.senderCorpId !== message.chatbotCorpId || (corpId && message.senderCorpId !== corpId)) return;
+  if (!message?.senderCorpId || message.senderCorpId !== message.chatbotCorpId || (corpId && message.senderCorpId !== corpId)) return;
   if (message.msgtype !== 'text' || !message.text?.content || !validWebhook(message.sessionWebhook)) return;
   if (!rememberMessage(message.msgId)) return;
-  const content = answerQuery(getGames(), message.text.content.slice(0, 120));
-  const response = await fetch(message.sessionWebhook, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ msgtype: 'text', text: { content } })
-  });
-  if (!response.ok) throw new Error(`DingTalk reply failed: HTTP ${response.status}`);
+  try {
+    const content = answerQuery(getGames(), message.text.content.slice(0, 120));
+    const response = await fetch(message.sessionWebhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ msgtype: 'text', text: { content } })
+    });
+    if (!response.ok) throw new Error(`DingTalk reply failed: HTTP ${response.status}`);
+  } catch (error) {
+    if (message.msgId) recentMessages.delete(message.msgId);
+    throw error;
+  }
 }
 
 export async function startDingTalkBot(getGames) {
