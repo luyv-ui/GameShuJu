@@ -20,6 +20,19 @@ export const tapTapRankingSources = {
   played: { label: '热玩榜', url: 'https://www.taptap.cn/top/played' },
   new: { label: '新品榜', url: 'https://www.taptap.cn/top/new' }
 };
+const mediaSearch = {
+  wechat: '微信小游戏畅销榜',
+  douyin: '抖音小游戏畅销榜'
+};
+const mediaApi = 'http://www.gamelook.com.cn/wp-json/wp/v2';
+
+function selectMediaPost(posts, platform) {
+  const term = mediaSearch[platform];
+  if (!term || !Array.isArray(posts)) throw new Error('第三方榜单搜索结果无效');
+  const matches = posts.filter(post => new RegExp(`^\\d{1,2}月${term}Top\\s*100`).test(post.title || '') &&
+    /^http:\/\/www\.gamelook\.com\.cn\/\d{4}\/\d{2}\/\d+\/$/.test(post.url || ''));
+  return matches.sort((a, b) => b.id - a.id)[0];
+}
 
 export function parseRanking(html) {
   const data = JSON.parse(load(html)('#__NEXT_DATA__').text());
@@ -96,6 +109,27 @@ export function parseTapTapRanking(html) {
   return items;
 }
 
+export function parseMediaMonthlyRanking(searchJson, postJson, platform) {
+  const posts = JSON.parse(searchJson.replace(/^\uFEFF/, ''));
+  const term = mediaSearch[platform];
+  const match = selectMediaPost(posts, platform);
+  if (!match) throw new Error('没有找到可核验的月度 Top 100 报道');
+  const post = JSON.parse(postJson.replace(/^\uFEFF/, ''));
+  if (post.id !== match.id || post.link !== match.url || !post.date_gmt) throw new Error('榜单文章与搜索结果不一致');
+  const body = load(post.content?.rendered || '')('body').text().replace(/\s+/g, ' ');
+  const line = body.match(new RegExp(`(\\d{4})年(\\d{1,2})月${term}前十名依次是[：:]([^。]+)。`));
+  if (!line) throw new Error('报道没有明确列出前十名及榜单月份');
+  const names = [...line[3].matchAll(/《([^》]{1,80})》/g)].map(match => match[1]);
+  if (names.length !== 10 || new Set(names).size !== 10) throw new Error('报道的前十名不完整');
+  const period = `${line[1]}-${line[2].padStart(2, '0')}`;
+  const publishedAt = `${post.date_gmt}Z`;
+  if (Number.isNaN(Date.parse(publishedAt)) || period > publishedAt.slice(0, 7)) throw new Error('榜单月份或发布日期无效');
+  return { url: match.url, period, publishedAt, items: names.map((name, index) => ({
+    rank: index + 1, id: `${platform}:${period}:${index + 1}`, name, icon: '', developer: '', tags: [],
+    description: '', url: match.url
+  })) };
+}
+
 export function createRankings({ fetchPage = async url => {
   try {
     const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GameIntelligenceResearch/1.0)' }, signal: AbortSignal.timeout(15000) });
@@ -109,12 +143,13 @@ export function createRankings({ fetchPage = async url => {
   const boards = Object.fromEntries(Object.entries(rankingSources).map(([key, source]) => [key, { ...source, items: [], fetchedAt: null, error: null }]));
   const apple = Object.fromEntries(Object.entries(appleRankingSources).map(([key, source]) => [key, { ...source, items: [], fetchedAt: null, error: null }]));
   const taptap = Object.fromEntries(Object.entries(tapTapRankingSources).map(([key, source]) => [key, { ...source, items: [], fetchedAt: null, error: null }]));
+  boards.mediaMonthly = { label: '第三方月度畅销 Top 10', url: '', items: [], fetchedAt: null, error: null };
+  const douyin = { mediaMonthly: { label: '第三方月度畅销 Top 10', url: '', items: [], fetchedAt: null, error: null } };
   const platforms = {
-    wechat: { label: '微信小游戏', scope: '腾讯应用宝公开榜单', boards },
+    wechat: { label: '微信小游戏', scope: '腾讯应用宝公开榜单及 GameLook 月度报道', boards },
     apple: { label: 'App Store', scope: '中国区 iPhone 游戏榜单', boards: apple },
     taptap: { label: 'TapTap', scope: 'TapTap 公开榜单', boards: taptap },
-    douyin: { label: '抖音小游戏', scope: '暂无可验证的公开榜单接口', boards: {}, unavailable: true,
-      sourceUrl: 'https://developer.open-douyin.com/' }
+    douyin: { label: '抖音小游戏', scope: 'GameLook 第三方月度畅销榜报道', boards: douyin }
   };
   let lastAttempt = 0;
   let pending = null;
@@ -124,7 +159,7 @@ export function createRankings({ fetchPage = async url => {
     if (!force && lastAttempt && now() - lastAttempt < ttl) return { source: '多平台公开游戏榜单', boards, platforms };
     lastAttempt = now();
     pending = (async () => {
-      await Promise.all([
+      const official = Promise.all([
         ...Object.entries(rankingSources).map(([key, source]) => ({ key, source, target: boards, parse: parseRanking })),
         ...Object.entries(appleRankingSources).map(([key, source]) => ({ key, source, target: apple, parse: parseAppleRanking })),
         ...Object.entries(tapTapRankingSources).map(([key, source]) => ({ key, source, target: taptap, parse: parseTapTapRanking }))
@@ -136,6 +171,22 @@ export function createRankings({ fetchPage = async url => {
           target[key] = { ...target[key], error: error instanceof Error ? error.message : '采集失败' };
         }
       }));
+      const monthly = Promise.all(Object.entries(mediaSearch).map(async ([platform, term]) => {
+        const target = platforms[platform].boards;
+        try {
+          const searchJson = await fetchPage(`${mediaApi}/search?search=${encodeURIComponent(term)}&per_page=10`);
+          const posts = JSON.parse(searchJson.replace(/^\uFEFF/, ''));
+          const match = selectMediaPost(posts, platform);
+          if (!match) throw new Error('没有找到可核验的月度 Top 100 报道');
+          const postJson = await fetchPage(`${mediaApi}/posts/${match.id}`);
+          const result = parseMediaMonthlyRanking(searchJson, postJson, platform);
+          target.mediaMonthly = { label: '第三方月度畅销 Top 10', ...result,
+            fetchedAt: new Date(now()).toISOString(), error: null };
+        } catch (error) {
+          target.mediaMonthly = { ...target.mediaMonthly, error: error instanceof Error ? error.message : '采集失败' };
+        }
+      }));
+      await Promise.all([official, monthly]);
       return { source: '多平台公开游戏榜单', boards, platforms };
     })();
     try { return await pending; }
