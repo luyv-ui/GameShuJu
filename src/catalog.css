@@ -84,3 +84,7 @@
   .channel-summary span { min-width: 0; }
   .channel-summary strong { font-size: 16px; }
 }
+.catalog-sync { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 18px; padding: 11px 0; border-bottom: 1px solid #e4e9eb; color: #65717a; font-size: 12px; }
+.catalog-sync strong { color: #26343b; font-size: 13px; }
+.catalog-sync a, .catalog-source-link { display: inline-flex; align-items: center; gap: 4px; color: #167f76; text-decoration: none; }
+.catalog-sync a:hover, .catalog-source-link:hover { text-decoration: underline; }

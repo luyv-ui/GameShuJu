@@ -70,6 +70,20 @@ export function generateInvestmentReport(project, generatedAt = new Date().toISO
     `付费用户 D180 留存：${percent(inputs.users.payingD180Pct)}；月度现金流自然衰减率：${percent(inputs.users.monthlyCashDecayPct)}。`,
     `版本更新周期：${present(inputs.operations.versionCycleMonths) ? `${number(inputs.operations.versionCycleMonths)} 个月` : '资料缺失'}；版本流水拉升：${percent(inputs.operations.versionRevenueLiftPct)}；内容消耗周期：${present(inputs.operations.contentConsumptionMonths) ? `${number(inputs.operations.contentConsumptionMonths)} 个月` : '资料缺失'}。`
   ];
+  const retention = [inputs.users.d1Pct, inputs.users.d7Pct, inputs.users.d30Pct, inputs.users.d90Pct];
+  if (retention.every(present)) {
+    sustainability.push(`用户留存 D1/D7/D30/D90：${retention.map(percent).join(' / ')}。`);
+    if (retention.some((value, index) => index > 0 && value > retention[index - 1])) {
+      sustainability.push('相邻用户留存点出现上升，需核对是否为同一批用户和同一统计口径。');
+    }
+  } else sustainability.push('用户留存曲线尚缺节点，暂不判断 D1 至 D90 的变化。');
+  if (present(inputs.operations.versionCycleMonths) && present(inputs.operations.contentConsumptionMonths)) {
+    const gap = inputs.operations.contentConsumptionMonths - inputs.operations.versionCycleMonths;
+    sustainability.push(gap < 0 ? `内容消耗周期比大版本周期短 ${number(-gap)} 个月，需复核内容更新计划。`
+      : `内容消耗周期与大版本周期相差 ${number(gap)} 个月（内容周期较长或相同）；该比较不代表实际留存。`);
+  } else sustainability.push('版本周期或内容消耗周期缺失，暂不能判断内容供给间隔。');
+  sustainability.push(`平均单次时长：${present(inputs.users.avgSessionMinutes) ? `${number(inputs.users.avgSessionMinutes)} 分钟` : '资料缺失'}；新用户增长：${percent(inputs.users.newUserGrowthPct)}；经济系统稳定性：${present(inputs.operations.economyStabilityScore) ? `${number(inputs.operations.economyStabilityScore)} 分` : '资料缺失'}；用户口碑：${present(inputs.operations.sentimentScore) ? `${number(inputs.operations.sentimentScore)} 分` : '资料缺失'}。`);
+  sustainability.push(`负面事件现金流冲击：${percent(inputs.operations.negativeEventCashShockPct)}。版本流水拉升与自然衰减口径不同，不能直接相抵。`);
   if (assessment.breakdown) sustainability.push(`现金流持续性得分：${number(assessment.breakdown.sustainability)} 分。`);
   else sustainability.push('关键数据尚未齐备，暂不判断长线稳定性。');
 
@@ -77,6 +91,7 @@ export function generateInvestmentReport(project, generatedAt = new Date().toISO
     `市场数据：${inputs.market.region || '地区缺失'}，${inputs.market.asOf || '日期缺失'}；依据：${inputs.market.basis || '未提供'}。`,
     `用户数据：${inputs.users.region || '地区缺失'}，${inputs.users.asOf || '日期缺失'}；依据：${inputs.users.basis || '未提供'}。`,
     `商业化数据：${inputs.commercial.region || '地区缺失'}，${inputs.commercial.asOf || '日期缺失'}；依据：${inputs.commercial.basis || '未提供'}。`,
+    `运营数据：${inputs.operations.region || '地区缺失'}，${inputs.operations.asOf || '日期缺失'}；依据：${inputs.operations.basis || '未提供'}。`,
     `财务假设：前期投入 ${money(inputs.finance.upfrontCost, inputs.finance.currency)}，年折现率 ${percent(inputs.finance.annualDiscountRatePct)}；依据：${inputs.finance.basis || '未提供'}。`,
     ...Object.entries(inputs.finance.scenarios).map(([name, scenario]) =>
       `${scenarioLabels[name]}情景输入：首月收入 ${money(scenario.month1Revenue, inputs.finance.currency)}，月收入衰减率 ${percent(scenario.monthlyRevenueDecayPct)}，月运营成本 ${money(scenario.monthlyOperatingCost, inputs.finance.currency)}。`)

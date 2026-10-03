@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { sqliteEnabled, withDatabase, withDatabaseTransaction, dbGetScoreConfig, dbPutScoreConfig } from './db.js';
 
 const defaultFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../data/score-config.json');
 const configFile = () => process.env.SCORE_CONFIG_FILE || defaultFile;
@@ -64,6 +65,10 @@ export function validateScoreConfig(input) {
 }
 
 export function getScoreConfig() {
+  if (sqliteEnabled()) return withDatabase(db => {
+    const saved = dbGetScoreConfig(db);
+    return saved ? validateScoreConfig(saved) : structuredClone(defaultScoreConfig);
+  });
   try { return validateScoreConfig(JSON.parse(fs.readFileSync(configFile(), 'utf8'))); }
   catch (error) {
     if (error.code === 'ENOENT') return structuredClone(defaultScoreConfig);
@@ -73,6 +78,10 @@ export function getScoreConfig() {
 
 export function putScoreConfig(input) {
   const config = validateScoreConfig(input);
+  if (sqliteEnabled()) {
+    withDatabaseTransaction(db => dbPutScoreConfig(db, config));
+    return config;
+  }
   const file = configFile();
   const temporary = `${file}.${randomUUID()}.tmp`;
   fs.mkdirSync(path.dirname(file), { recursive: true });

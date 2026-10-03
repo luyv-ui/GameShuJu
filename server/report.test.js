@@ -36,6 +36,20 @@ test('report uses calculated rating and all three scenario results', () => {
   assert.ok(report.sections.recommendation.includes('推荐立项'));
 });
 
+test('report explains retention and content cadence from entered operating data', () => {
+  const item = project();
+  Object.assign(item.investmentInputs.users, { d1Pct: 45, d7Pct: 23, d30Pct: 12, d90Pct: 6, avgSessionMinutes: 32, newUserGrowthPct: 8 });
+  Object.assign(item.investmentInputs.operations, { versionCycleMonths: 3, contentConsumptionMonths: 2,
+    versionRevenueLiftPct: 15, economyStabilityScore: 80, sentimentScore: 76,
+    negativeEventCashShockPct: 11, region: 'CN', asOf: '2026-10-01', basis: '运营周报' });
+  const report = generateInvestmentReport(item);
+  assert.ok(report.sections.sustainability.some(line => line.includes('D1/D7/D30/D90')));
+  assert.ok(report.sections.sustainability.some(line => line.includes('短 1 个月')));
+  assert.ok(report.assumptions.some(line => line.includes('运营周报')));
+  item.investmentInputs.users.d7Pct = 50;
+  assert.ok(generateInvestmentReport(item).sections.sustainability.some(line => line.includes('同一批用户')));
+});
+
 test('veto stays first even when financial inputs are incomplete', () => {
   const item = project();
   item.risks = [{ id: 'veto', category: 'ip', status: 'confirmed', severity: 'catastrophic', description: '版权冲突', evidenceUrl: '' }];

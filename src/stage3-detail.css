@@ -1,4 +1,4 @@
-.stage3-project-detail{width:min(960px,100%)}
+.project-detail-modal.stage3-project-detail{width:min(960px,100%)}
 .project-detail-tabs{display:flex;gap:5px;padding:0 28px;border-bottom:1px solid #e8edef;overflow-x:auto;flex:none}
 .project-detail-tabs button{flex:none;padding:13px 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:#71838b;font-size:12px}
 .project-detail-tabs button.selected{border-color:#209e91;color:#168f84;font-weight:700}
@@ -35,5 +35,23 @@
 .project-operations-grid span{display:block;color:#8b9ba2;font-size:10px}
 .project-operations-grid strong{display:block;margin-top:5px;color:#38505a;font-size:13px;overflow-wrap:anywhere}
 .project-operations section p{font-size:10px;color:#81939a;line-height:1.6;margin:10px 0 0;overflow-wrap:anywhere}
+.operations-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #e4eaec;border-radius:5px;overflow:hidden}
+.operations-summary>div{min-width:0;padding:13px 12px;border-right:1px solid #e4eaec;background:#f8faf9}
+.operations-summary>div:last-child{border-right:0}
+.operations-summary span{display:block;color:#82939a;font-size:10px;line-height:1.4}
+.operations-summary strong{display:block;margin-top:7px;color:#2a4a51;font-size:17px;overflow-wrap:anywhere}
+.operations-group-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.operations-group-heading h3{margin:0}
+.operations-group-heading>span{color:#7b8e94;font-size:10px;white-space:nowrap}
+.operations-findings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 20px}
+.operations-findings>div{min-width:0;padding:12px 0;border-top:1px solid #edf1f2}
+.operations-findings span{display:block;color:#71858b;font-size:10px}
+.operations-findings strong{display:block;margin-top:5px;color:#2e4a52;font-size:14px}
+.operations-findings .attention strong{color:#b2693d}
+.project-operations .operations-findings p{margin:5px 0 0;color:#6f8289;font-size:11px}
+.operations-retention-chart{height:240px;width:100%}
+.project-operations .operations-note{margin-top:3px}
+.project-operations .operations-empty{padding:24px 0;color:#82939a}
 .project-risk-tab{border-top:0;padding-top:0;margin-top:0}
 @media(max-width:600px){.project-detail-tabs{padding:0 14px}.project-detail-tabs button{padding:11px 9px;font-size:11px}.project-report-grid{grid-template-columns:1fr}.project-report-heading{align-items:flex-start}.project-benchmark-summary{align-items:flex-start;flex-direction:column}.project-operations-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.project-combined-chart{height:220px}}
+@media(max-width:600px){.operations-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.operations-summary>div:nth-child(2){border-right:0}.operations-summary>div:nth-child(-n+2){border-bottom:1px solid #e4eaec}.operations-findings{grid-template-columns:1fr}.operations-retention-chart{height:200px}}

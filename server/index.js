@@ -8,11 +8,20 @@ import { getDingTalkBotStatus, startDingTalkBot } from './dingtalk.js';
 import { listProjects, createProject, updateProject, deleteProject } from './projects.js';
 import { getScoreConfig, putScoreConfig } from './score-config.js';
 import { generateInvestmentReport, renderInvestmentReportPdf } from './report.js';
+import { createAuth } from './auth.js';
+import { createCatalogSync } from './catalog-sync.js';
 
 const app = express();
 app.use(express.json({ limit: '8mb' }));
+app.use('/api/auth/exchange', express.urlencoded({ extended: false, limit: '4kb' }));
+const auth = createAuth();
+const catalogSync = createCatalogSync();
+auth.routes(app);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.use('/api/games', (req, res, next) => (req.method === 'GET' ? auth.read : auth.write)(req, res, next));
+app.use('/api/projects', (req, res, next) => (req.method === 'GET' ? auth.read : auth.write)(req, res, next));
+app.use('/api/score-config', (req, res, next) => (req.method === 'GET' ? auth.read : auth.admin)(req, res, next));
 
 app.get('/api/games', (req, res) => {
   const games = searchGames(listGames(), req.query.q, req.query.genre, req.query.platform, req.query.channel);
@@ -20,6 +29,12 @@ app.get('/api/games', (req, res) => {
 });
 app.get('/api/bot/status', (req, res) => {
   res.json(getDingTalkBotStatus());
+});
+app.get('/api/catalog-sync', auth.read, (req, res) => res.json(catalogSync.getStatus()));
+app.post('/api/catalog-sync', auth.admin, (req, res) => {
+  if (catalogSync.getStatus().running) return res.status(409).json({ error: '同步正在进行' });
+  void catalogSync.run().catch(error => console.error('Catalog sync failed:', error));
+  res.status(202).json({ started: true });
 });
 app.post('/api/games', (req, res) => {
   try { res.status(201).json(createGame(req.body)); }
@@ -97,4 +112,8 @@ app.get('/{*path}', (req, res) => res.sendFile(path.join(root, 'dist/index.html'
 const port = Number(process.env.PORT || 3001);
 const host = process.env.HOST || '127.0.0.1';
 app.listen(port, host, () => console.log(`API listening on http://${host}:${port}`));
+if (process.env.CATALOG_SYNC_ENABLED !== 'false') {
+  setTimeout(() => void catalogSync.run().catch(error => console.error('Catalog sync failed:', error)), 10000).unref();
+  setInterval(() => void catalogSync.run().catch(error => console.error('Catalog sync failed:', error)), 6 * 60 * 60 * 1000).unref();
+}
 startDingTalkBot(listGames).catch(error => console.error('DingTalk bot failed:', error));

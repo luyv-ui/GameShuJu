@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, Menu, Newspaper, Plus, Radio, Search, ShieldAlert, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
+import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, LogOut, Menu, Newspaper, Plus, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
 import type { Game, GameInput, Project } from './types';
 import './catalog.css';
 import ProjectWorkspace from './ProjectWorkspace';
 import InvestmentDashboard from './InvestmentDashboard';
 import InvestmentCompare from './InvestmentCompare';
 import RiskCenter from './RiskCenter';
+import { apiFetch, useAuth } from './auth';
 
 type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare';
+type CatalogSyncStatus = { running?: boolean; finishedAt?: string; sources?: Record<string, { url: string; state: string; lastSuccessAt?: string; fetched?: number; added?: number; updated?: number; error?: string; warnings?: string[] }> };
 const palette = ['#e9a236', '#37a89b', '#687dd8', '#e16f72', '#889db2', '#b37ac5'];
 const emptyGame: GameInput = { channel: '端游', name: '', englishName: '', genre: '', platforms: [], releaseDate: '', developer: '', publisher: '', price: null, rating: null, reviewCount: null, peakPlayers: null, tags: [], description: '', steamAppId: null, sourceUrl: '', isDemo: false };
 
@@ -32,6 +34,10 @@ function sourceName(game: Game) {
   if (isAppStoreUrl(game.sourceUrl)) return 'Apple App Store 美国区';
   if (sourceHost(game.sourceUrl) === 'store.steampowered.com') return 'Steam';
   if (sourceHost(game.sourceUrl) === 'sj.qq.com') return '腾讯应用宝';
+  if (sourceHost(game.sourceUrl) === 'play.google.com') return 'Google Play';
+  if (sourceHost(game.sourceUrl) === 'store.playstation.com') return 'PlayStation Store';
+  if (sourceHost(game.sourceUrl) === 'www.xbox.com') return 'Xbox';
+  if (sourceHost(game.sourceUrl) === 'www.nintendo.com') return 'Nintendo';
   return game.sourceUrl ? '其他来源' : '未录入';
 }
 function isSteamRecord(game: Game) { return sourceName(game) === 'Steam'; }
@@ -124,6 +130,7 @@ function Modal({ game, onClose, onSave, onDelete }: { game?: Game; onClose: () =
 }
 
 export default function App() {
+  const { user, mode, canWrite } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectError, setProjectError] = useState('');
@@ -142,6 +149,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [importMessage, setImportMessage] = useState('');
+  const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null);
+  const [syncMessage, setSyncMessage] = useState('');
 
   async function refresh() {
     try {
@@ -153,6 +162,28 @@ export default function App() {
     finally { setLoading(false); }
   }
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    if (view !== 'library') return;
+    const poll = async () => {
+      try {
+        const response = await fetch('/api/catalog-sync');
+        if (response.ok) setSyncStatus(await response.json());
+        await refresh();
+      } catch { /* Game fetch displays its own connection error. */ }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 30000);
+    return () => window.clearInterval(timer);
+  }, [view]);
+  async function syncNow() {
+    setSyncMessage('正在请求同步...');
+    try {
+      const response = await apiFetch('/api/catalog-sync', { method: 'POST' });
+      if (!response.ok) throw new Error((await response.json()).error || '同步请求失败');
+      setSyncStatus(current => ({ ...current, running: true }));
+      setSyncMessage('同步已启动，完成后情报库自动刷新');
+    } catch (cause) { setSyncMessage(cause instanceof Error ? cause.message : '同步请求失败'); }
+  }
   async function refreshProjects() {
     try {
       const response = await fetch('/api/projects');
@@ -163,12 +194,12 @@ export default function App() {
   useEffect(() => { void refreshProjects(); }, [view]);
 
   async function saveGame(value: GameInput) {
-    const response = await fetch(editing && editing !== 'new' ? `/api/games/${editing.id}` : '/api/games', { method: editing && editing !== 'new' ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
+    const response = await apiFetch(editing && editing !== 'new' ? `/api/games/${editing.id}` : '/api/games', { method: editing && editing !== 'new' ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
     if (!response.ok) throw new Error((await response.json()).error || '保存失败');
     await refresh();
   }
   async function removeGame(id: string) {
-    const response = await fetch(`/api/games/${id}`, { method: 'DELETE' });
+    const response = await apiFetch(`/api/games/${id}`, { method: 'DELETE' });
     if (!response.ok) throw new Error('删除失败');
     await refresh();
   }
@@ -176,12 +207,16 @@ export default function App() {
     setImportMessage('正在导入...');
     try {
       const document = JSON.parse(await file.text());
-      const response = await fetch('/api/games/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(document) });
+      const response = await apiFetch('/api/games/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(document) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || '导入失败');
       setImportMessage(`新增 ${result.added} 款，更新演示记录 ${result.replaced} 款，跳过重复 ${result.skipped} 款`);
       await refresh();
     } catch (cause) { setImportMessage(cause instanceof Error ? cause.message : '导入失败'); }
+  }
+  async function logout() {
+    const response = await apiFetch('/api/auth/logout', { method: 'POST' });
+    if (response.ok) window.location.reload();
   }
 
   const genres = useMemo(() => ['全部', ...new Set(games.map(game => game.genre))], [games]);
@@ -235,11 +270,11 @@ export default function App() {
         <button className={view === 'analytics' ? 'active' : ''} onClick={() => nav('analytics')}><BarChart3 size={18} /> 可视化分析</button>
         <button className={view === 'catalogCompare' ? 'active' : ''} onClick={() => nav('catalogCompare')}><ArrowLeftRight size={18} /> 产品对比</button>
       </nav>
-      <div className="side-bottom"><div className="side-tip"><Database size={17} /><span>本地情报库<small>团队协作数据</small></span></div><div className="side-profile"><span className="profile-avatar">DC</span><span>点触科技<small>项目工作空间</small></span><CircleHelp size={16} /></div></div>
+      <div className="side-bottom"><div className="side-tip"><Database size={17} /><span>本地情报库<small>团队协作数据</small></span></div><div className="side-profile"><span className="profile-avatar">{user?.name.slice(0, 1) || 'DC'}</span><span>{user?.name || '点触科技'}<small>{user?.role === 'admin' ? '管理员' : user?.role === 'analyst' ? '分析师' : '投资人'}</small></span>{mode === 'external' ? <button className="icon-button" title="退出登录" aria-label="退出登录" onClick={() => void logout()}><LogOut size={16} /></button> : <CircleHelp size={16} />}</div></div>
     </aside>
     {menuOpen && <button className="mobile-scrim" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
     <main className="main">
-      <header className="topbar"><div className="top-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{({ dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比' } as Record<View, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar">DC</span></div></header>
+      <header className="topbar"><div className="top-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{({ dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比' } as Record<View, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar" title={user?.name}>{user?.name.slice(0, 1) || 'DC'}</span></div></header>
       <div className="content">
         {view === 'dashboard' && <InvestmentDashboard projects={projects} games={games} onOpenProject={openProject} onOpenRiskCenter={() => nav('risks')} />}
         {view === 'projects' && <ProjectWorkspace initialSelectedId={requestedProjectId} onOpenBenchmark={() => nav('benchmark')} />}
@@ -247,15 +282,26 @@ export default function App() {
         {view === 'risks' && <RiskCenter projects={projects} onOpenProject={openProject} />}
         {view !== 'projects' && (error || projectError) && <div className="error-banner" role="alert">{error || projectError}<button onClick={() => { void refresh(); void refreshProjects(); }}>重试</button></div>}
         {view === 'library' && <>
-          <div className="page-heading"><div><span className="eyebrow">GAME DATABASE / 01</span><h1>游戏情报库</h1><p>集中查看游戏资料、市场信号与产品定位</p></div><div className="heading-actions"><label className="secondary-button import-button"><Upload size={17} /> 导入 JSON<input type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importDocument(file); event.target.value = ''; }} /></label><button className="primary-button" onClick={() => setEditing('new')}><Plus size={18} /> 录入游戏</button></div></div>
+          <div className="page-heading"><div><span className="eyebrow">GAME DATABASE / 01</span><h1>游戏情报库</h1><p>集中查看游戏资料、市场信号与产品定位</p></div>{canWrite && <div className="heading-actions">{user?.role === 'admin' && <button className="secondary-button" onClick={() => void syncNow()} disabled={syncStatus?.running}><RefreshCw size={17} /> {syncStatus?.running ? '同步中' : '立即同步'}</button>}<label className="secondary-button import-button"><Upload size={17} /> 导入 JSON<input type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importDocument(file); event.target.value = ''; }} /></label><button className="primary-button" onClick={() => setEditing('new')}><Plus size={18} /> 录入游戏</button></div>}</div>
           {importMessage && <div className="data-note" role="status">{importMessage}</div>}
+          <div className="catalog-sync" aria-label="平台同步状态">
+            <strong>平台目录同步</strong>
+            <span>{syncStatus?.running ? '更新中' : syncStatus?.finishedAt ? `上次完成 ${new Date(syncStatus.finishedAt).toLocaleString('zh-CN')}` : '等待首次同步'}</span>
+            {Object.entries(syncStatus?.sources || {}).map(([key, source]) =>
+              <a key={key} href={source.url} target="_blank" rel="noreferrer"
+                title={source.error || source.warnings?.join('；') || (source.lastSuccessAt ? `最近成功 ${new Date(source.lastSuccessAt).toLocaleString('zh-CN')}` : '')}>
+                {key === 'steam' ? 'Steam' : key === 'apple' ? 'App Store' : key === 'google' ? 'Google Play' : '微信小游戏'} · {source.state === 'error' ? '同步失败' : `${source.state === 'partial' ? '部分成功 · ' : ''}抓取 ${source.fetched || 0} / 新增 ${source.added || 0} / 更新 ${source.updated || 0}`} <ExternalLink size={12} />
+              </a>)}
+            <span title="这些平台已有商品来源链接，但尚未接入稳定自动采集">其他平台：PlayStation、Xbox、Nintendo（手动来源）</span>
+            {syncMessage && <span role="status">{syncMessage}</span>}
+          </div>
           <div className="stat-grid"><div className="stat"><div className="stat-icon teal"><Gamepad2 size={20} /></div><span>收录游戏</span><strong>{games.length}<small> 款</small></strong><p>覆盖 {genres.length - 1} 个游戏类型</p></div><div className="stat"><div className="stat-icon amber"><SlidersHorizontal size={20} /></div><span>游戏类型</span><strong>{genres.length - 1}<small> 类</small></strong><p>多维度分类检索</p></div><div className="stat"><div className="stat-icon blue"><BarChart3 size={20} /></div><span>平均好评率</span><strong>{avgRating ?? '—'}{avgRating !== null && <small> %</small>}</strong><p>仅非演示且有 Steam 好评率的记录</p></div><div className="stat"><div className="stat-icon coral"><ArrowUpRight size={20} /></div><span>覆盖平台</span><strong>{platforms.length - 1}<small> 个</small></strong><p>按来源已核验的平台</p></div></div>
           <div className="insight-strip"><div><span>Steam 实采游戏</span><strong>{liveGames.length}</strong></div><div><span>当前在线合计</span><strong>{formatNumber(totalCurrentPlayers)}</strong></div><div><span>近90天公告</span><strong>{totalNews90Days}</strong></div><div><span>最近采集</span><strong className="capture-time">{formatDateTime(latestCapture)}</strong></div></div>
           <div className="channel-tabs" role="group" aria-label="产品分类筛选">{['全部', '端游', 'App', '小游戏'].map(item => <button key={item} className={channel === item ? 'selected' : ''} onClick={() => setChannel(item)}>{item}<span>{item === '全部' ? games.length : channelCounts[item] || 0}</span></button>)}</div>
           <div className="section-title"><div><h2>游戏列表</h2><p>浏览和筛选收录的游戏产品</p></div><span className="count-pill">共 {filtered.length} 款</span></div>
           <div className="filters"><div className="search-field"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索游戏、开发商或标签..." aria-label="搜索游戏" />{query && <button onClick={() => setQuery('')} aria-label="清除搜索"><X size={16} /></button>}</div><div className="filter-select"><SlidersHorizontal size={16} /><select value={genre} onChange={e => setGenre(e.target.value)} aria-label="筛选游戏类型">{genres.map(item => <option key={item} value={item}>{item === '全部' ? '全部类型' : item}</option>)}</select></div><div className="filter-select"><select value={platform} onChange={e => setPlatform(e.target.value)} aria-label="筛选平台">{platforms.map(item => <option key={item} value={item}>{item === '全部' ? '全部平台' : item}</option>)}</select></div><div className="filter-select sort-select"><ArrowDownUp size={16} /><select value={sort} onChange={e => setSort(e.target.value)} aria-label="排序"><option value="rating">好评率优先</option><option value="reviews">评价数优先</option><option value="release">最新发行</option><option value="name">名称排序</option></select></div></div>
           <div className="genre-tabs" role="group" aria-label="快捷类型筛选">{genres.slice(0, 7).map(item => <button key={item} className={genre === item ? 'selected' : ''} onClick={() => setGenre(item)}>{item}</button>)}</div>
-          <div className="table-wrap"><table><thead><tr><th>游戏 / 产品</th><th>分类</th><th>类型</th><th>数据来源</th><th>采集日期</th><th>平台</th><th>Steam 好评率</th><th>Steam 人民币售价</th><th><span className="sr-only">操作</span></th></tr></thead><tbody>{visibleGames.map(game => <tr key={game.id} onClick={() => setEditing(game)}><td><div className="game-cell"><Cover game={game} /><div><strong>{game.name}</strong><small>{game.englishName || game.developer || '未录入英文名'} {game.isDemo && <em>演示</em>}</small></div></div></td><td>{game.channel}</td><td><span className="genre-badge">{game.genre}</span></td><td>{sourceName(game)}</td><td>{game.dataAsOf || '未录入'}</td><td><div className="platforms">{game.platforms.slice(0, 2).map(item => <span key={item}>{item}</span>)}{game.platforms.length > 2 && <span>+{game.platforms.length - 2}</span>}</div></td><td><span className="rating"><span />{isSteamRecord(game) && game.rating !== null ? `${game.rating}%` : '未录入'}</span></td><td className="price">{isSteamRecord(game) ? formatPrice(game.price) : '未录入'}</td><td><button className="row-action" aria-label={`编辑${game.name}`} onClick={event => { event.stopPropagation(); setEditing(game); }}><ArrowUpRight size={17} /></button></td></tr>)}</tbody></table>{!loading && !filtered.length && <div className="empty-state"><Search size={26} /><strong>没有找到匹配的游戏</strong><p>调整关键词或筛选条件后再试</p></div>}{loading && <div className="empty-state">加载中...</div>}</div>
+          <div className="table-wrap"><table><thead><tr><th>游戏 / 产品</th><th>分类</th><th>类型</th><th>数据来源</th><th>采集日期</th><th>平台</th><th>Steam 好评率</th><th>Steam 人民币售价</th>{canWrite && <th><span className="sr-only">操作</span></th>}</tr></thead><tbody>{visibleGames.map(game => <tr key={game.id} onClick={canWrite ? () => setEditing(game) : undefined}><td><div className="game-cell"><Cover game={game} /><div><strong>{game.name}</strong><small>{game.englishName || game.developer || '未录入英文名'} {game.isDemo && <em>演示</em>}</small></div></div></td><td>{game.channel}</td><td><span className="genre-badge">{game.genre}</span></td><td>{game.sourceUrl ? <a className="catalog-source-link" href={game.sourceUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>{sourceName(game)} <ExternalLink size={12} /></a> : sourceName(game)}</td><td>{game.dataAsOf || '未录入'}</td><td><div className="platforms">{game.platforms.slice(0, 2).map(item => <span key={item}>{item}</span>)}{game.platforms.length > 2 && <span>+{game.platforms.length - 2}</span>}</div></td><td><span className="rating"><span />{isSteamRecord(game) && game.rating !== null ? `${game.rating}%` : '未录入'}</span></td><td className="price">{isSteamRecord(game) ? formatPrice(game.price) : '未录入'}</td>{canWrite && <td><button className="row-action" aria-label={`编辑${game.name}`} onClick={event => { event.stopPropagation(); setEditing(game); }}><ArrowUpRight size={17} /></button></td>}</tr>)}</tbody></table>{!loading && !filtered.length && <div className="empty-state"><Search size={26} /><strong>没有找到匹配的游戏</strong><p>调整关键词或筛选条件后再试</p></div>}{loading && <div className="empty-state">加载中...</div>}</div>
           {filtered.length > pageSize && <div className="pagination"><span>第 {page} / {totalPages} 页，共 {filtered.length} 款</span><div><button disabled={page <= 1} onClick={() => setPage(value => value - 1)}>上一页</button><button disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>下一页</button></div></div>}
           <div className="data-note">演示记录的指标为样例值。导入样本按来源口径展示；空值表示未取得数据，不等于零。</div>
         </>}

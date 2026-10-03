@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { sqliteEnabled, withDatabase, withDatabaseTransaction, dbListGames, dbSaveGames } from './db.js';
 
 const dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../data');
 const defaultDataFile = path.join(dataDir, 'games.json');
@@ -26,6 +27,7 @@ export function gameChannel(game) {
 }
 
 function readBaseGames() {
+  if (sqliteEnabled()) return withDatabase(db => dbListGames(db));
   const file = dataFile();
   return JSON.parse(fs.readFileSync(fs.existsSync(file) ? file : seedFile, 'utf8'));
 }
@@ -195,14 +197,14 @@ function gameKeys(game) {
   return keys;
 }
 
-export function importGames(document) {
+export function importGames(document, { refreshExisting = false } = {}) {
   if (!document || !Array.isArray(document.games) || !document.games.length || document.games.length > 2000) {
     throw new Error('导入文档须包含 1 至 2000 条 games 记录');
   }
   const incoming = document.games.map(validateGame);
   if (incoming.some(game => !game.sourceUrl)) throw new Error('导入记录必须包含来源链接');
-  return withWriteLock(() => {
-    const games = readBaseGames().map(game => ({ ...game, channel: gameChannel(game) }));
+  const operation = db => {
+    const games = (db ? dbListGames(db) : readBaseGames()).map(game => ({ ...game, channel: gameChannel(game) }));
     const keys = new Map();
     games.forEach((game, index) => gameKeys(game).forEach(key => {
       const previous = keys.get(key);
@@ -211,6 +213,7 @@ export function importGames(document) {
     const now = new Date().toISOString();
     let added = 0;
     let replaced = 0;
+    let updated = 0;
     let skipped = 0;
     for (const game of incoming) {
       const identities = gameKeys(game);
@@ -220,6 +223,35 @@ export function importGames(document) {
           games[index] = { ...games[index], ...game, updatedAt: now };
           gameKeys(games[index]).forEach(key => keys.set(key, index));
           replaced++;
+        } else if (refreshExisting && game.sourceUrl && gameKeys(games[index]).some(key => identities.includes(key) && key !== `name:${game.name.trim().toLocaleLowerCase()}:${[...game.platforms].map(x => x.toLocaleLowerCase()).sort().join(',')}`) &&
+          game.dataAsOf && game.dataAsOf >= (games[index].dataAsOf || '')) {
+          const previous = games[index];
+          const retainedSteamMetrics = ['price', 'rating', 'reviewCount', 'peakPlayers'].some(field =>
+            game[field] === null && previous[field] !== null && previous[field] !== undefined);
+          const extras = game.sourceExtras && previous.sourceExtras
+            ? Object.fromEntries(Object.keys({ ...previous.sourceExtras, ...game.sourceExtras }).map(key =>
+              [key, game.sourceExtras[key] ?? previous.sourceExtras[key] ?? null]))
+            : game.sourceExtras ?? previous.sourceExtras;
+          const next = { ...previous, ...game,
+            genre: game.genre === '未分类' ? previous.genre : game.genre,
+            englishName: game.englishName || previous.englishName,
+            price: game.price ?? previous.price,
+            rating: game.rating ?? previous.rating,
+            reviewCount: game.reviewCount ?? previous.reviewCount,
+            peakPlayers: game.peakPlayers ?? previous.peakPlayers,
+            metricsSourceUrl: game.metricsSourceUrl || previous.metricsSourceUrl,
+            sourceExtras: extras,
+            metricScope: retainedSteamMetrics ? previous.metricScope : game.metricScope,
+            releaseDate: game.releaseDate || previous.releaseDate,
+            developer: game.developer || previous.developer,
+            publisher: game.publisher || previous.publisher,
+            description: game.description || previous.description,
+            tags: game.tags.length ? game.tags : previous.tags,
+            updatedAt: now };
+          if (JSON.stringify({ ...next, updatedAt: '' }) !== JSON.stringify({ ...previous, updatedAt: '' })) {
+            games[index] = next;
+            updated++;
+          } else skipped++;
         } else skipped++;
         continue;
       }
@@ -228,40 +260,45 @@ export function importGames(document) {
       games.push({ id: randomUUID(), ...game, updatedAt: now });
       added++;
     }
-    if (added || replaced) saveGames(games);
-    return { added, replaced, skipped, total: games.length };
-  });
+    if (added || replaced || updated) db ? dbSaveGames(db, games) : saveGames(games);
+    return refreshExisting ? { added, replaced, updated, skipped, total: games.length }
+      : { added, replaced, skipped, total: games.length };
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }
 
 export function createGame(input) {
   const valid = validateGame(input);
-  return withWriteLock(() => {
+  const operation = db => {
     const game = { id: randomUUID(), ...valid, updatedAt: new Date().toISOString() };
-    const games = readBaseGames();
+    const games = db ? dbListGames(db) : readBaseGames();
     games.unshift(game);
-    saveGames(games);
+    db ? dbSaveGames(db, games) : saveGames(games);
     return game;
-  });
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }
 
 export function updateGame(id, input) {
   const valid = validateGame(input);
-  return withWriteLock(() => {
-    const games = readBaseGames();
+  const operation = db => {
+    const games = db ? dbListGames(db) : readBaseGames();
     const index = games.findIndex(game => game.id === id);
     if (index < 0) return null;
     games[index] = { ...games[index], ...valid, id, updatedAt: new Date().toISOString() };
-    saveGames(games);
+    db ? dbSaveGames(db, games) : saveGames(games);
     return games[index];
-  });
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }
 
 export function deleteGame(id) {
-  return withWriteLock(() => {
-    const games = readBaseGames();
+  const operation = db => {
+    const games = db ? dbListGames(db) : readBaseGames();
     const filtered = games.filter(game => game.id !== id);
     if (filtered.length === games.length) return false;
-    saveGames(filtered);
+    db ? dbSaveGames(db, filtered) : saveGames(filtered);
     return true;
-  });
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }

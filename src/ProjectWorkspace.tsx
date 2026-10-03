@@ -4,6 +4,7 @@ import type { Project, ProjectInput, ProjectRisk } from './types';
 import InvestmentInputsEditor, { emptyInvestmentInputs } from './InvestmentInputsEditor';
 import ProjectDetail from './ProjectDetail';
 import ScoreConfigEditor from './ScoreConfigEditor';
+import { apiFetch, useAuth } from './auth';
 
 const stages: Record<Project['stage'], string> = { concept: '概念阶段', prototype: '原型验证', production: '研发中', live: '已上线' };
 const categories: Record<ProjectRisk['category'], string> = { license: '版号合规', ip: '版权 / IP', team: '核心团队', competition: '竞品冲击', technical: '技术与安全' };
@@ -15,7 +16,7 @@ function isVetoRisk(risk: ProjectRisk) { return risk.status === 'confirmed' && r
 function dateText(date: string) { return date ? new Date(date).toLocaleDateString('zh-CN') : '未记录'; }
 
 async function projectRequest(path: string, method?: string, body?: ProjectInput) {
-  const response = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
+  const response = await apiFetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
   if (!response.ok) {
     let message = '操作失败，请稍后重试';
     try { const data = await response.json(); message = data.error || message; } catch { /* Keep the fallback for non-JSON errors. */ }
@@ -77,6 +78,7 @@ function ProjectEditor({ project, onClose, onSaved }: { project?: Project; onClo
 }
 
 export default function ProjectWorkspace({ initialSelectedId = null, onOpenBenchmark }: { initialSelectedId?: string | null; onOpenBenchmark?: () => void }) {
+  const { canWrite, canAdmin } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -105,18 +107,18 @@ export default function ProjectWorkspace({ initialSelectedId = null, onOpenBench
     finally { setBusy(false); }
   }
   return <>
-    <div className="page-heading project-heading"><div><span className="eyebrow">INVESTMENT PROJECTS / 02</span><h1>立项项目</h1><p>项目、风险与投资评估</p></div><div className="heading-actions"><button className="secondary-button" onClick={() => setShowConfig(true)}><Settings2 size={16} /> 评分参数</button><button className="primary-button" onClick={() => setEditing('new')}><Plus size={17} /> 新建项目</button></div></div>
+    <div className="page-heading project-heading"><div><span className="eyebrow">INVESTMENT PROJECTS / 02</span><h1>立项项目</h1><p>项目、风险与投资评估</p></div><div className="heading-actions">{canAdmin && <button className="secondary-button" onClick={() => setShowConfig(true)}><Settings2 size={16} /> 评分参数</button>}{canWrite && <button className="primary-button" onClick={() => setEditing('new')}><Plus size={17} /> 新建项目</button>}</div></div>
     {error && <div className="error-banner" role="alert">{error}<button onClick={() => void refresh()}>重试</button></div>}
     {vetoed.length > 0 && <div className="project-alert" role="alert"><ShieldAlert size={21} /><div><strong>{vetoed.length} 个项目触发一票否决</strong><span>已确认的毁灭性风险优先处理，结论已锁定为禁止立项。</span></div></div>}
     <div className="project-overview"><div><span>待立项项目</span><strong>{projects.length}</strong></div><div><span>禁止立项</span><strong className="danger">{vetoed.length}</strong></div><div><span>已完成评分</span><strong>{projects.filter(project => project.assessment.status === 'rated').length}</strong></div><div><span>资料不足</span><strong>{projects.filter(project => project.assessment.status === 'pending').length}</strong></div></div>
     <div className="project-list-head"><h2>项目清单</h2><div className="search-field"><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索项目、类型或团队" aria-label="搜索立项项目" />{query && <button onClick={() => setQuery('')} aria-label="清除搜索"><X size={15} /></button>}</div></div>
     <div className="project-list">
       {loading && <div className="project-empty">正在加载项目...</div>}
-      {!loading && projects.length === 0 && <div className="project-empty"><ClipboardList size={28} /><strong>还没有立项项目</strong><button className="primary-button" onClick={() => setEditing('new')}><Plus size={16} /> 新建项目</button></div>}
+      {!loading && projects.length === 0 && <div className="project-empty"><ClipboardList size={28} /><strong>还没有立项项目</strong>{canWrite && <button className="primary-button" onClick={() => setEditing('new')}><Plus size={16} /> 新建项目</button>}</div>}
       {!loading && projects.length > 0 && filtered.length === 0 && <div className="project-empty">没有匹配的项目</div>}
       {filtered.map(project => <button className={`project-list-row ${project.assessment.status === 'vetoed' ? 'vetoed' : ''}`} key={project.id} onClick={() => setSelectedId(project.id)}><div className="project-row-main"><strong>{project.name}</strong><span>{project.genre} · {project.studio || '未录入团队'}</span></div><span className="project-stage">{stages[project.stage]}</span><span className={`project-result ${project.assessment.status}`}>{project.assessment.status === 'vetoed' && <ShieldAlert size={15} />}{project.assessment.conclusion}</span><span className="project-row-date">{dateText(project.updatedAt)}</span><ChevronRight size={17} /></button>)}
     </div>
-    {selected && <ProjectDetail key={selected.id} project={selected} busy={busy} onClose={() => setSelectedId(null)} onDelete={() => void removeProject(selected)} onEdit={() => { setEditing(selected); setSelectedId(null); }} onOpenBenchmark={onOpenBenchmark} />}
+    {selected && <ProjectDetail key={selected.id} project={selected} busy={busy} canWrite={canWrite} onClose={() => setSelectedId(null)} onDelete={() => void removeProject(selected)} onEdit={() => { setEditing(selected); setSelectedId(null); }} onOpenBenchmark={onOpenBenchmark} />}
     {editing && <ProjectEditor key={editing === 'new' ? 'new' : editing.id} project={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
     {showConfig && <ScoreConfigEditor onClose={() => setShowConfig(false)} onSaved={refresh} />}
   </>;

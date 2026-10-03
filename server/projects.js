@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { evaluateProject } from './scoring.js';
 import { getScoreConfig } from './score-config.js';
+import { sqliteEnabled, withDatabase, withDatabaseTransaction, dbListProjects, dbSaveProjects } from './db.js';
 
 const defaultFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../data/projects.json');
 const dataFile = () => process.env.PROJECT_DATA_FILE || defaultFile;
@@ -162,6 +163,7 @@ function presented(project, config) {
 }
 
 function readProjects() {
+  if (sqliteEnabled()) return withDatabase(dbListProjects);
   try { return JSON.parse(fs.readFileSync(dataFile(), 'utf8')); }
   catch (error) {
     if (error.code === 'ENOENT') return [];
@@ -222,37 +224,40 @@ export function listProjects() {
 
 export function createProject(input) {
   const valid = validateProject(input);
-  return withWriteLock(() => {
+  const operation = db => {
     const now = new Date().toISOString();
     const project = { id: randomUUID(), ...valid,
       investmentInputs: valid.investmentInputs ?? emptyInvestmentInputs(),
       riskReviewComplete: valid.riskReviewComplete ?? false,
       createdAt: now, updatedAt: now };
-    const projects = readProjects();
+    const projects = db ? dbListProjects(db) : readProjects();
     projects.unshift(project);
-    saveProjects(projects);
+    db ? dbSaveProjects(db, projects) : saveProjects(projects);
     return presented(project, getScoreConfig());
-  });
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }
 
 export function updateProject(id, input) {
   const valid = validateProject(input);
-  return withWriteLock(() => {
-    const projects = readProjects();
+  const operation = db => {
+    const projects = db ? dbListProjects(db) : readProjects();
     const index = projects.findIndex(project => project.id === id);
     if (index < 0) return null;
     projects[index] = { ...projects[index], ...valid, updatedAt: new Date().toISOString() };
-    saveProjects(projects);
+    db ? dbSaveProjects(db, projects) : saveProjects(projects);
     return presented(projects[index], getScoreConfig());
-  });
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }
 
 export function deleteProject(id) {
-  return withWriteLock(() => {
-    const projects = readProjects();
+  const operation = db => {
+    const projects = db ? dbListProjects(db) : readProjects();
     const kept = projects.filter(project => project.id !== id);
     if (kept.length === projects.length) return false;
-    saveProjects(kept);
+    db ? dbSaveProjects(db, kept) : saveProjects(kept);
     return true;
-  });
+  };
+  return sqliteEnabled() ? withDatabaseTransaction(operation) : withWriteLock(() => operation(null));
 }

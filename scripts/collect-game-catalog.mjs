@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { load } from 'cheerio';
-import { validateGame } from '../server/store.js';
+import { prepareVerifiedSnapshot } from '../server/ingestion.js';
 
 const fetchedAt = new Date().toISOString();
 const dateAsOf = fetchedAt.slice(0, 10);
@@ -160,14 +161,14 @@ const document = {
 if (failures.length || games.length < 1000 || steamCount < targets.steam || appCount < targets.app || miniCount < targets.mini) {
   throw new Error(`采集量不足：${JSON.stringify(document.counts)}，失败 ${JSON.stringify(failures)}`);
 }
-const keys = new Set();
-for (const game of games) {
-  validateGame(game);
-  const key = game.steamAppId ? `steam:${game.steamAppId}` : game.sourceExtras?.appStoreId ? `app:${game.sourceExtras.appStoreId}` : `mini:${game.sourceUrl}`;
-  if (keys.has(key)) throw new Error(`重复商品：${key}`);
-  keys.add(key);
-}
+prepareVerifiedSnapshot(document);
 const file = path.join('data/imports', `public-game-catalog-${fetchedAt.replace(/[:.]/g, '-')}.json`);
 await fs.mkdir(path.dirname(file), { recursive: true });
-await fs.writeFile(file, `${JSON.stringify(document, null, 2)}\n`, { flag: 'wx' });
+const temporary = path.join(path.dirname(file), `.public-game-catalog-${randomUUID()}.tmp`);
+try {
+  await fs.writeFile(temporary, `${JSON.stringify(document, null, 2)}\n`, { flag: 'wx' });
+  await fs.link(temporary, file);
+} finally {
+  await fs.rm(temporary, { force: true });
+}
 console.log(JSON.stringify({ file, counts: document.counts, total: games.length, failures: failures.length }));

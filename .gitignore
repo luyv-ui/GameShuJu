@@ -4,5 +4,10 @@ dist/
 data/games.json
 data/projects.json
 data/score-config.json
+data/catalog-sync-status.json
+data/catalog-sync-status.json.lock
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
 .env
 .DS_Store

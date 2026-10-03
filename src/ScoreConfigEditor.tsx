@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import type { ScoreConfig } from './types';
+import { apiFetch } from './auth';
 
 const groups: { key: keyof ScoreConfig; title: string; fields: { key: string; label: string; unit?: string }[] }[] = [
   { key: 'weights', title: '评分权重', fields: [{ key: 'market', label: '市场' }, { key: 'returns', label: '收益' }, { key: 'sustainability', label: '持续性' }, { key: 'riskReserve', label: '风险保留' }] },
@@ -30,7 +31,7 @@ export default function ScoreConfigEditor({ onClose, onSaved }: { onClose: () =>
     if (Math.abs(total - 100) > 1e-9) { setError('四项权重之和必须为 100。'); return; }
     setBusy(true); setError('');
     try {
-      const response = await fetch('/api/score-config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+      const response = await apiFetch('/api/score-config', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '保存评分配置失败');
       await onSaved(); onClose();

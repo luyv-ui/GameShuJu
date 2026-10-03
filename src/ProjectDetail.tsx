@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowUpRight, Download, ExternalLink, FileText, Pencil, 
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { Project, ProjectRisk } from './types';
 import ProjectForecast from './ProjectForecast';
+import OperationsAnalysis from './OperationsAnalysis';
 import './stage3-detail.css';
 
 type Tab = 'overview' | 'finance' | 'operations' | 'risks';
@@ -32,7 +33,6 @@ const riskStatuses: Record<ProjectRisk['status'], string> = { unverified: '待�
 const riskSeverities: Record<ProjectRisk['severity'], string> = { low: '低', medium: '中', high: '高', catastrophic: '毁灭性' };
 const breakdownLabels: Record<string, string> = { market: '市场', returns: '收益', sustainability: '持续性', riskReserve: '风险保留', riskPenalty: '风险扣分' };
 const number = (value: number) => new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 }).format(value);
-const metric = (value: number | null, unit = '') => value === null ? '未录入' : `${number(value)}${unit}`;
 const isVetoRisk = (risk: ProjectRisk) => risk.status === 'confirmed' && risk.severity === 'catastrophic';
 
 function ReportSection({ title, lines }: { title: string; lines: string[] }) {
@@ -86,28 +86,17 @@ function CombinedForecast({ project }: { project: Project }) {
   return <section className="project-combined"><h3>三情景累计现金流</h3><div className="project-combined-chart" role="img" aria-label="乐观、基准、悲观三情景 24 个月累计现金流对比"><ResponsiveContainer width="100%" height="100%"><LineChart data={data} margin={{ top: 8, right: 12, bottom: 2, left: 5 }}><CartesianGrid stroke="#edf1f2" vertical={false} /><XAxis dataKey="month" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} /><YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} width={65} tickFormatter={number} /><Tooltip formatter={(value, name) => [`${number(Number(value))} ${project.forecast?.currency}`, name === 'optimistic' ? '乐观' : name === 'base' ? '基准' : '悲观']} labelFormatter={label => `第 ${label} 月`} /><Legend formatter={name => name === 'optimistic' ? '乐观' : name === 'base' ? '基准' : '悲观'} /><Line type="monotone" dataKey="optimistic" stroke="#259989" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="base" stroke="#587b9e" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="pessimistic" stroke="#c78655" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div></section>;
 }
 
-function Operations({ project }: { project: Project }) {
-  const { market, users, commercial, operations } = project.investmentInputs;
-  const groups = [
-    { title: '市场', source: market, rows: [['市场规模 TAM', market.tam, market.currency], ['12 个月增速', market.growth12mPct, '%'], ['新品 6 个月存活率', market.survival6mPct, '%'], ['集中度', market.concentrationPct, '%']] },
-    { title: '用户与留存', source: users, rows: [['D1 留存', users.d1Pct, '%'], ['D7 留存', users.d7Pct, '%'], ['D30 留存', users.d30Pct, '%'], ['D90 留存', users.d90Pct, '%'], ['付费 D180 留存', users.payingD180Pct, '%'], ['月现金流衰减', users.monthlyCashDecayPct, '%']] },
-    { title: '商业化', source: commercial, rows: [['LTV90', commercial.ltv90, commercial.currency], ['CAC', commercial.cac, commercial.currency], ['ARPU', commercial.arpu, commercial.currency], ['付费渗透率', commercial.payerPenetrationPct, '%']] },
-    { title: '运营健康', source: operations, rows: [['版本周期', operations.versionCycleMonths, '月'], ['版本流水提升', operations.versionRevenueLiftPct, '%'], ['经济系统稳定性', operations.economyStabilityScore, '分'], ['舆情得分', operations.sentimentScore, '分'], ['负面事件现金流冲击', operations.negativeEventCashShockPct, '%']] }
-  ];
-  return <div className="project-operations">{groups.map(group => <section key={group.title}><h3>{group.title}</h3><div className="project-operations-grid">{group.rows.map(([label, value, unit]) => <div key={String(label)}><span>{label}</span><strong>{metric(value as number | null, unit as string)}</strong></div>)}</div><p>地区：{group.source.region || '未录入'} · 截至：{group.source.asOf || '未录入'}</p><p>依据：{group.source.basis || '未录入'}</p></section>)}</div>;
-}
-
 function Risks({ project }: { project: Project }) {
   const sorted = [...project.risks].sort((a, b) => Number(isVetoRisk(b)) - Number(isVetoRisk(a)));
   return <div className="project-detail-section project-risk-tab"><h3>风险清单 <span>{project.risks.length}</span></h3><p className="project-review-status">审核状态：{project.riskReviewComplete ? '已完成' : '未完成'}</p>{sorted.length === 0 ? <p>尚未录入风险事实。</p> : <div className="project-detail-risks">{sorted.map(risk => <div key={risk.id} className={`project-detail-risk ${isVetoRisk(risk) ? 'vetoed' : ''}`}><div><strong>{isVetoRisk(risk) && <ShieldAlert size={16} />}{riskCategories[risk.category]}</strong><span>{riskStatuses[risk.status]} · {riskSeverities[risk.severity]}</span></div><p>{risk.description}</p>{risk.evidenceUrl && <a href={risk.evidenceUrl} target="_blank" rel="noreferrer">查看证据 <ExternalLink size={13} /></a>}</div>)}</div>}</div>;
 }
 
-export default function ProjectDetail({ project, busy, onClose, onDelete, onEdit, onOpenBenchmark }: { project: Project; busy: boolean; onClose: () => void; onDelete: () => void; onEdit: () => void; onOpenBenchmark?: () => void }) {
+export default function ProjectDetail({ project, busy, canWrite, onClose, onDelete, onEdit, onOpenBenchmark }: { project: Project; busy: boolean; canWrite: boolean; onClose: () => void; onDelete: () => void; onEdit: () => void; onOpenBenchmark?: () => void }) {
   const [tab, setTab] = useState<Tab>('overview');
   return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal project-detail-modal stage3-project-detail" role="dialog" aria-modal="true" aria-label={`${project.name}项目详情`} onMouseDown={event => event.stopPropagation()}>
     <div className="modal-header"><div><span className="eyebrow">立项项目 / {stageNames[project.stage]}</span><h2>{project.name}</h2></div><button className="icon-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div>
     <div className="project-detail-tabs" role="tablist" aria-label="项目详情视图">{tabs.map(item => <button key={item.key} type="button" role="tab" aria-selected={tab === item.key} className={tab === item.key ? 'selected' : ''} onClick={() => setTab(item.key)}>{item.label}</button>)}</div>
-    <div className="project-detail-body" role="tabpanel">{tab === 'overview' && <Overview project={project} onOpenBenchmark={onOpenBenchmark} />}{tab === 'finance' && <><CombinedForecast project={project} /><ProjectForecast forecast={project.forecast} /><div className="project-finance-basis"><FileText size={14} /> 财务假设：{project.investmentInputs.finance.basis || '未录入'}</div></>}{tab === 'operations' && <Operations project={project} />}{tab === 'risks' && <Risks project={project} />}</div>
-    <div className="project-detail-actions"><button className="text-danger" disabled={busy} onClick={onDelete}><Trash2 size={15} /> 删除项目</button><span className="spacer" /><button className="primary-button" onClick={onEdit}><Pencil size={15} /> 编辑项目</button></div>
+    <div className="project-detail-body" role="tabpanel">{tab === 'overview' && <Overview project={project} onOpenBenchmark={onOpenBenchmark} />}{tab === 'finance' && <><CombinedForecast project={project} /><ProjectForecast forecast={project.forecast} /><div className="project-finance-basis"><FileText size={14} /> 财务假设：{project.investmentInputs.finance.basis || '未录入'}</div></>}{tab === 'operations' && <OperationsAnalysis inputs={project.investmentInputs} />}{tab === 'risks' && <Risks project={project} />}</div>
+    {canWrite && <div className="project-detail-actions"><button className="text-danger" disabled={busy} onClick={onDelete}><Trash2 size={15} /> 删除项目</button><span className="spacer" /><button className="primary-button" onClick={onEdit}><Pencil size={15} /> 编辑项目</button></div>}
   </div></div>;
 }

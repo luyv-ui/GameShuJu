@@ -157,7 +157,7 @@ test('project HTTP routes return a full project and expected status codes', asyn
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const server = spawn(process.execPath, ['server/index.js'], {
     cwd: root,
-    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', PROJECT_DATA_FILE: path.join(dir, 'projects.json'),
+    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', AUTH_MODE: 'local', PROJECT_DATA_FILE: path.join(dir, 'projects.json'),
       SCORE_CONFIG_FILE: path.join(dir, 'score-config.json'),
       DINGTALK_CLIENT_ID: '', DINGTALK_CLIENT_SECRET: '' },
     stdio: 'ignore'
@@ -167,38 +167,44 @@ test('project HTTP routes return a full project and expected status codes', asyn
     let ready = false;
     for (let attempt = 0; attempt < 50; attempt++) {
       try {
-        const response = await fetch(url);
+        const response = await fetch(`http://127.0.0.1:${port}/api/auth/me`);
         if (response.ok) { ready = true; break; }
       } catch { /* Wait for the child server. */ }
       await new Promise(resolve => setTimeout(resolve, 20));
     }
     assert.equal(ready, true, 'project API did not start');
-    assert.deepEqual(await (await fetch(url)).json(), []);
-    const create = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' },
+    const me = await fetch(`http://127.0.0.1:${port}/api/auth/me`);
+    const sessionCookie = me.headers.get('set-cookie').split(';')[0];
+    const csrfToken = (await me.json()).csrfToken;
+    const request = (path, options = {}) => fetch(path, {
+      ...options, headers: { Cookie: sessionCookie, 'X-CSRF-Token': csrfToken, ...options.headers }
+    });
+    assert.deepEqual(await (await request(url)).json(), []);
+    const create = await request(url, { method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...base, assessment: { status: 'vetoed', score: 0 } }) });
     assert.equal(create.status, 201);
     const project = await create.json();
     assert.deepEqual(project.risks, []);
     assert.equal(project.assessment.status, 'pending');
-    assert.equal((await (await fetch(url)).json())[0].id, project.id);
+    assert.equal((await (await request(url)).json())[0].id, project.id);
     const configUrl = `http://127.0.0.1:${port}/api/score-config`;
-    const config = await (await fetch(configUrl)).json();
+    const config = await (await request(configUrl)).json();
     assert.deepEqual(config.weights, { market: 20, returns: 30, sustainability: 30, riskReserve: 20 });
     const modified = { ...config, thresholds: { ...config.thresholds, recommendScore: 75 } };
-    const saveConfig = await fetch(configUrl, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(modified) });
+    const saveConfig = await request(configUrl, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(modified) });
     assert.equal(saveConfig.status, 200);
-    assert.equal((await (await fetch(configUrl)).json()).thresholds.recommendScore, 75);
+    assert.equal((await (await request(configUrl)).json()).thresholds.recommendScore, 75);
     assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'score-config.json'), 'utf8')).thresholds.recommendScore, 75);
-    const invalidConfig = await fetch(configUrl, { method: 'PUT', headers: { 'content-type': 'application/json' },
+    const invalidConfig = await request(configUrl, { method: 'PUT', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...modified, weights: { ...modified.weights, market: 19 } }) });
     assert.equal(invalidConfig.status, 400);
-    assert.equal((await (await fetch(configUrl)).json()).weights.market, 20);
-    const update = await fetch(`${url}/${project.id}`, { method: 'PUT', headers: { 'content-type': 'application/json' },
+    assert.equal((await (await request(configUrl)).json()).weights.market, 20);
+    const update = await request(`${url}/${project.id}`, { method: 'PUT', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...base, stage: 'prototype' }) });
     assert.equal(update.status, 200);
     assert.equal((await update.json()).stage, 'prototype');
-    assert.equal((await fetch(`${url}/${project.id}`, { method: 'DELETE' })).status, 204);
-    assert.equal((await fetch(`${url}/${project.id}`, { method: 'DELETE' })).status, 404);
+    assert.equal((await request(`${url}/${project.id}`, { method: 'DELETE' })).status, 204);
+    assert.equal((await request(`${url}/${project.id}`, { method: 'DELETE' })).status, 404);
   } finally {
     server.kill();
     await new Promise(resolve => server.once('close', resolve));
