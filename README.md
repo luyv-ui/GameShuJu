@@ -70,7 +70,7 @@ npm run dev
 
 本机默认 `AUTH_MODE=local`，仅允许监听 loopback，并创建本地管理员会话。团队环境须设置 `AUTH_MODE=external`、`AUTH_CORP_ID`、`AUTH_SHARED_SECRET`、`EXTERNAL_LOGIN_URL`、`AUTH_COOKIE_SECURE=true`，由现有身份服务在验证用户后调用 `POST /api/auth/exchange` 换取工作台会话。投资人只读；分析师可维护项目和游戏；管理员还可修改评分参数。写请求使用会话 CSRF 令牌。卢雨已负责钉钉连接，本仓库不再开发钉钉登录；身份交换的签名字段及回跳流程需与其现有服务联调。
 
-具体字段见[外部身份对接契约](docs/auth-integration.md)，生产准备步骤见[部署说明](docs/deployment.md)。
+具体字段见[外部身份对接契约](docs/auth-integration.md)。[部署说明](docs/deployment.md)包含单实例 Docker Compose、Caddy HTTPS、SQLite 持久卷和上线检查命令；真实组织账号与团队域名仍须在目标环境完成联调。
 
 **部署注意：**默认只监听 `127.0.0.1`。正式开放团队访问前，需要用真实身份服务、HTTPS、持久化数据库和目标网络环境完成联调；本地预览地址不对外可访问。
 

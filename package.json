@@ -13,7 +13,8 @@
     "collect:steam": "node scripts/collect-steam.mjs",
     "migrate:sqlite": "node scripts/migrate-to-sqlite.mjs",
     "backup:sqlite": "node scripts/sqlite-backup.mjs backup",
-    "restore:sqlite": "node scripts/sqlite-backup.mjs restore"
+    "restore:sqlite": "node scripts/sqlite-backup.mjs restore",
+    "check:deployment": "node scripts/check-deployment.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
