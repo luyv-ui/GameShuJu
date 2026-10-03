@@ -17,6 +17,8 @@ npm run dev
 
 ## 钉钉机器人
 
+详细步骤见 [钉钉游戏信息助手接入说明](docs/dingtalk-bot-setup.md)。
+
 1. 在钉钉开放平台为**点触科技股份有限公司**创建企业内部应用，添加机器人能力，选择 **Stream 模式**，发布并让组织成员可用。
 2. 将 `.env.example` 复制为 `.env`，填入应用的 `DINGTALK_CLIENT_ID`（AppKey）、`DINGTALK_CLIENT_SECRET`（AppSecret）。建议同时填写点触科技的 `DINGTALK_CORP_ID`。
 3. 运行 `npm run dev` 或在构建后运行 `npm start`；服务启动时会自动读取 `.env`。

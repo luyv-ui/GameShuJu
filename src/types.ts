@@ -1,3 +1,21 @@
+export type SteamNewsCounts = {
+  last365Days: number;
+  last90Days: number;
+  last30Days: number;
+  last7Days: number;
+};
+
+export type SteamNewsItem = {
+  id: string;
+  title: string;
+  url: string;
+  author: string;
+  publishedAt: string;
+  feed: string;
+  tags: string[];
+  excerpt: string;
+};
+
 export type Game = {
   id: string;
   name: string;
@@ -17,6 +35,11 @@ export type Game = {
   sourceUrl: string;
   isDemo: boolean;
   updatedAt?: string;
+  currentPlayers?: number | null;
+  steamNewsCounts?: SteamNewsCounts;
+  latestSteamNews?: SteamNewsItem[];
+  steamCapturedAt?: string;
+  hasLiveData?: boolean;
 };
 
-export type GameInput = Omit<Game, 'id' | 'updatedAt'>;
+export type GameInput = Omit<Game, 'id' | 'updatedAt' | 'currentPlayers' | 'steamNewsCounts' | 'latestSteamNews' | 'steamCapturedAt' | 'hasLiveData'>;

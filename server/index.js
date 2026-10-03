@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listGames, createGame, updateGame, deleteGame } from './store.js';
 import { searchGames } from './query.js';
-import { startDingTalkBot } from './dingtalk.js';
+import { getDingTalkBotStatus, startDingTalkBot } from './dingtalk.js';
 
 const app = express();
 app.use(express.json({ limit: '100kb' }));
@@ -12,6 +12,9 @@ app.use(express.json({ limit: '100kb' }));
 app.get('/api/games', (req, res) => {
   const games = searchGames(listGames(), req.query.q, req.query.genre, req.query.platform);
   res.json(games);
+});
+app.get('/api/bot/status', (req, res) => {
+  res.json(getDingTalkBotStatus());
 });
 app.post('/api/games', (req, res) => {
   try { res.status(201).json(createGame(req.body)); }

@@ -9,7 +9,8 @@
     "dev:server": "node --watch server/index.js",
     "build": "tsc -b && vite build",
     "start": "node server/index.js",
-    "test": "node --test server/*.test.js"
+    "test": "node --test server/*.test.js",
+    "collect:steam": "node scripts/collect-steam.mjs"
   },
   "dependencies": {
     "dingtalk-stream": "2.1.6-beta.1",
