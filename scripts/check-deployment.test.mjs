@@ -40,3 +40,18 @@ test('deployment check accepts isolated account mode without a preexisting sessi
   assert.deepEqual(await checkDeployment(`http://127.0.0.1:${server.address().port}`, 'accounts'),
     { health: 'ok', anonymous: 'blocked', login: 'accounts' });
 });
+
+test('deployment check preserves a shared HTTPS path prefix', async () => {
+  const paths = [];
+  const fetcher = async (url, options) => {
+    paths.push(url.pathname);
+    if (url.pathname.endsWith('/api/health')) return { status: 200, json: async () => ({ status: 'ok' }) };
+    if (url.pathname.endsWith('/api/auth/me')) return { status: 200, json: async () => ({ mode: 'accounts', authenticated: false }) };
+    if (url.pathname.endsWith('/api/projects')) return { status: 401 };
+    if (url.pathname.endsWith('/api/auth/password') && options.method === 'POST') return { status: 401 };
+    throw new Error(`unexpected request: ${url}`);
+  };
+  await checkDeployment('https://example.test/intelligence/', 'accounts', fetcher);
+  assert.deepEqual(paths, ['/intelligence/api/health', '/intelligence/api/auth/me',
+    '/intelligence/api/projects', '/intelligence/api/auth/password']);
+});

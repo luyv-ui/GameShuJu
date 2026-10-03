@@ -3,6 +3,7 @@ import { AlertCircle, ExternalLink, Plus, X } from 'lucide-react';
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer } from 'recharts';
 import type { Game, Project, ScoreConfig } from './types';
 import './stage3-compare.css';
+import { apiUrl } from './api-url';
 
 type Props = { projects: Project[]; games: Game[]; onOpenProject?: (projectId: string) => void };
 type Cell = string;
@@ -53,7 +54,7 @@ export default function InvestmentCompare({ projects, games, onOpenProject }: Pr
   const [scoreConfig, setScoreConfig] = useState<ScoreConfig | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/score-config', { signal: controller.signal }).then(response => {
+    fetch(apiUrl('/api/score-config'), { signal: controller.signal }).then(response => {
       if (!response.ok) throw new Error('评分参数加载失败');
       return response.json() as Promise<ScoreConfig>;
     }).then(setScoreConfig).catch(() => { if (!controller.signal.aborted) setScoreConfig(null); });

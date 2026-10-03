@@ -9,6 +9,7 @@ import InvestmentCompare from './InvestmentCompare';
 import RiskCenter from './RiskCenter';
 import RankingWorkspace from './RankingWorkspace';
 import { apiFetch, useAuth } from './auth';
+import { apiUrl } from './api-url';
 
 type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare' | 'rankings' | 'profitBreakdown';
 type CatalogSyncStatus = { running?: boolean; finishedAt?: string; sources?: Record<string, { url: string; state: string; lastSuccessAt?: string; fetched?: number; added?: number; updated?: number; error?: string; warnings?: string[] }> };
@@ -159,7 +160,7 @@ export default function App() {
 
   async function refresh() {
     try {
-      const response = await fetch('/api/games');
+      const response = await fetch(apiUrl('/api/games'));
       if (!response.ok) throw new Error('无法读取游戏数据');
       const data: Game[] = await response.json();
       setGames(data); setError('');
@@ -171,7 +172,7 @@ export default function App() {
     if (view !== 'library') return;
     const poll = async () => {
       try {
-        const response = await fetch('/api/catalog-sync');
+        const response = await fetch(apiUrl('/api/catalog-sync'));
         if (response.ok) setSyncStatus(await response.json());
         await refresh();
       } catch { /* Game fetch displays its own connection error. */ }
@@ -191,7 +192,7 @@ export default function App() {
   }
   async function refreshProjects() {
     try {
-      const response = await fetch('/api/projects');
+      const response = await fetch(apiUrl('/api/projects'));
       if (!response.ok) throw new Error('无法读取立项项目');
       setProjects(await response.json()); setProjectError('');
     } catch (cause) { setProjectError(cause instanceof Error ? cause.message : '加载项目失败'); }

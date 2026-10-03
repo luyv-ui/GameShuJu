@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, ExternalLink, Gamepad2, RefreshCw, Search, TrendingUp } from 'lucide-react';
 import './rankings.css';
+import { apiUrl } from './api-url';
 
 type RankingGame = { rank: number; id: string; name: string; icon: string; developer: string; tags: string[]; description: string; url: string };
 type Board = { label: string; url: string; items: RankingGame[]; fetchedAt: string | null; error: string | null };
@@ -25,7 +26,7 @@ function requestWithXhr(url: string): Promise<RankingData> {
 }
 
 async function requestRankings(force: boolean): Promise<RankingData> {
-  const url = `${window.location.origin}/api/rankings${force ? '?refresh=1' : ''}`;
+  const url = `${window.location.origin}${apiUrl('/api/rankings')}${force ? '?refresh=1' : ''}`;
   try {
     const response = await fetch(url, { credentials: 'same-origin' });
     if (!response.ok) throw new Error(`榜单接口返回 HTTP ${response.status}`);

@@ -5,6 +5,7 @@ import type { Project, ProjectRisk } from './types';
 import ProjectForecast from './ProjectForecast';
 import OperationsAnalysis from './OperationsAnalysis';
 import './stage3-detail.css';
+import { apiUrl } from './api-url';
 
 type Tab = 'overview' | 'finance' | 'operations' | 'risks';
 type Report = {
@@ -45,7 +46,7 @@ function ReportPanel({ project }: { project: Project }) {
   useEffect(() => {
     let active = true;
     setReport(null); setError('');
-    fetch(`/api/projects/${encodeURIComponent(project.id)}/report`).then(async response => {
+    fetch(apiUrl(`/api/projects/${encodeURIComponent(project.id)}/report`)).then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '报告生成失败');
       if (active) setReport(data);
@@ -53,7 +54,7 @@ function ReportPanel({ project }: { project: Project }) {
     return () => { active = false; };
   }, [project.id, project.updatedAt]);
   return <div className="project-report">
-    <div className="project-report-heading"><div><h3>投资研判报告</h3><span>根据当前项目数据实时生成</span></div><a className="secondary-button" href={`/api/projects/${encodeURIComponent(project.id)}/report.pdf`} download={`${project.name}-投资研判报告.pdf`}><Download size={15} /> 导出 PDF</a></div>
+    <div className="project-report-heading"><div><h3>投资研判报告</h3><span>根据当前项目数据实时生成</span></div><a className="secondary-button" href={apiUrl(`/api/projects/${encodeURIComponent(project.id)}/report.pdf`)} download={`${project.name}-投资研判报告.pdf`}><Download size={15} /> 导出 PDF</a></div>
     {error ? <p className="project-report-error" role="alert">{error}</p> : !report ? <p className="project-report-loading">正在生成报告...</p> : <>
       <div className="project-report-grid"><ReportSection title="项目优势" lines={report.sections.strengths} /><ReportSection title="主要风险" lines={report.sections.risks} /><ReportSection title="收益测算" lines={report.sections.returns} /><ReportSection title="持续性判断" lines={report.sections.sustainability} /></div>
       <ReportSection title="最终建议" lines={[report.sections.recommendation]} />

@@ -7,7 +7,8 @@ export async function checkDeployment(baseUrl, expectedMode = 'external', fetche
   if (base.protocol !== 'https:' && !(base.protocol === 'http:' && loopback.has(base.hostname))) {
     throw new Error('团队访问地址必须使用 HTTPS');
   }
-  const request = (path, options = {}) => fetcher(new URL(path, base), { redirect: 'manual', ...options });
+  const request = (path, options = {}) => fetcher(new URL(`${base.pathname.replace(/\/$/, '')}${path}`, base),
+    { redirect: 'manual', ...options });
   const health = await request('/api/health');
   if (health.status !== 200 || (await health.json()).status !== 'ok') throw new Error('健康检查未通过');
 

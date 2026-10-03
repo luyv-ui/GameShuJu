@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import type { ScoreConfig } from './types';
 import { apiFetch } from './auth';
+import { apiUrl } from './api-url';
 
 const groups: { key: keyof ScoreConfig; title: string; fields: { key: string; label: string; unit?: string }[] }[] = [
   { key: 'weights', title: '评分权重', fields: [{ key: 'market', label: '市场' }, { key: 'returns', label: '收益' }, { key: 'sustainability', label: '持续性' }, { key: 'riskReserve', label: '风险保留' }] },
@@ -14,7 +15,7 @@ export default function ScoreConfigEditor({ onClose, onSaved }: { onClose: () =>
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    fetch('/api/score-config').then(async response => {
+    fetch(apiUrl('/api/score-config')).then(async response => {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '读取评分配置失败');
       setConfig(data);

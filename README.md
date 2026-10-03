@@ -74,7 +74,7 @@ Steam 历史峰值来自第三方 SteamCharts 的 all-time peak，并保留商�
 
 具体字段见[外部身份对接契约](docs/auth-integration.md)。[部署说明](docs/deployment.md)包含单实例 Docker Compose、Caddy HTTPS、SQLite 持久卷和上线检查命令；真实组织账号与团队域名仍须在目标环境完成联调。
 
-使用共享服务器 `129.204.33.162` 的独立 HTTPS 端口和三种试用账号时，按[独立测试环境部署说明](docs/ip-deployment.md)操作。试用账号模式与正式组织身份对接分开，账号密码不进入仓库。
+共享服务器上的公开入口是 `https://129.204.33.162/intelligence/`；系统使用独立进程和数据库，复用已有 HTTPS 入口，详见[部署说明](docs/ip-deployment.md)。试用账号模式与正式组织身份对接分开，账号密码不进入仓库。
 
 **部署注意：**默认只监听 `127.0.0.1`。正式开放团队访问前，需要用真实身份服务、HTTPS、持久化数据库和目标网络环境完成联调；本地预览地址不对外可访问。
 
