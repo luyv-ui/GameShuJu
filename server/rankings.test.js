@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRankings, parseRanking } from './rankings.js';
+import { createRankings, parseRanking, parseAppleRanking, parseTapTapRanking } from './rankings.js';
 
 const html = items => `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: { dynamicCardResponse: { data: { components: [{ data: { itemData: items } }] } } } } })}</script>`;
 const item = (id, name) => ({ pkg_name: `wx${id.repeat(16)}`, name, report_info: { yyb_app_type: 'wechatgame' } });
@@ -11,6 +11,22 @@ test('ranking parser preserves source order and removes non-games and duplicates
   assert.equal(rows[0].url, 'https://sj.qq.com/appdetail/wxaaaaaaaaaaaaaaaa');
 });
 
+test('Apple RSS and TapTap structured lists keep verified item order', () => {
+  const apple = JSON.stringify({ feed: { entry: [
+    { id: { attributes: { 'im:id': '123' } }, 'im:name': { label: '游戏 A' },
+      'im:image': [{ label: 'https://example.com/a.png' }], 'im:artist': { label: '厂商' },
+      link: [{ attributes: { rel: 'alternate', href: 'https://apps.apple.com/cn/app/game-a/id123' } }] },
+    { id: { attributes: { 'im:id': '123' } }, 'im:name': { label: '重复' },
+      link: [{ attributes: { rel: 'alternate', href: 'https://apps.apple.com/cn/app/game-a/id123' } }] }
+  ] } });
+  assert.deepEqual(parseAppleRanking(apple).map(game => [game.rank, game.name]), [[1, '游戏 A']]);
+  const tap = '<script type="application/ld+json">' + JSON.stringify({ '@type': 'ItemList', itemListElement: [
+    { position: 1, name: '游戏 B', url: 'https://www.taptap.cn/app/456' },
+    { position: 2, name: '错误域名', url: 'https://example.com/app/2' }
+  ] }) + '</script>';
+  assert.deepEqual(parseTapTapRanking(tap).map(game => [game.rank, game.name]), [[1, '游戏 B']]);
+});
+
 test('ranking cache retains last successful board after a failed refresh', async () => {
   let time = 1000;
   let fail = false;
@@ -19,7 +35,7 @@ test('ranking cache retains last successful board after a failed refresh', async
   const first = await rankings.get();
   assert.equal(first.boards.bestSell.items[0].name, '测试游戏');
   await rankings.get();
-  assert.equal(calls, 3);
+  assert.equal(calls, 9);
   time += 1000;
   fail = true;
   const stale = await rankings.get(true);

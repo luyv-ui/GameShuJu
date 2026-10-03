@@ -4,10 +4,9 @@ import './rankings.css';
 
 type RankingGame = { rank: number; id: string; name: string; icon: string; developer: string; tags: string[]; description: string; url: string };
 type Board = { label: string; url: string; items: RankingGame[]; fetchedAt: string | null; error: string | null };
-type RankingData = { source: string; boards: Record<'popular' | 'bestSell' | 'new', Board> };
-type RankingKey = keyof RankingData['boards'];
-const boardKeys: RankingKey[] = ['popular', 'bestSell', 'new'];
-const boardNames: Record<RankingKey, string> = { popular: '最受欢迎', bestSell: '畅销榜', new: '热门新游' };
+type RankingGroup = { label: string; scope: string; boards: Record<string, Board>; unavailable?: boolean; sourceUrl?: string };
+type RankingData = { source: string; boards: Record<'popular' | 'bestSell' | 'new', Board>; platforms: Record<string, RankingGroup> };
+const platformKeys = ['wechat', 'apple', 'taptap', 'douyin'];
 
 function requestWithXhr(url: string): Promise<RankingData> {
   return new Promise((resolve, reject) => {
@@ -31,11 +30,11 @@ async function requestRankings(force: boolean): Promise<RankingData> {
     const response = await fetch(url, { credentials: 'same-origin' });
     if (!response.ok) throw new Error(`榜单接口返回 HTTP ${response.status}`);
     const data = await response.json() as RankingData;
-    if (!data.boards?.bestSell) throw new Error('榜单接口返回的数据不完整');
+    if (!data.boards?.bestSell || !data.platforms?.apple) throw new Error('榜单接口返回的数据不完整');
     return data;
   } catch (error) {
     const fallback = await requestWithXhr(url);
-    if (!fallback.boards?.bestSell) throw error;
+    if (!fallback.boards?.bestSell || !fallback.platforms?.apple) throw error;
     return fallback;
   }
 }
@@ -79,7 +78,8 @@ function GameIcon({ game }: { game: RankingGame }) {
 
 export default function RankingWorkspace({ mode }: { mode: 'boards' | 'breakdown' }) {
   const [data, setData] = useState<RankingData | null>(null);
-  const [active, setActive] = useState<RankingKey>('popular');
+  const [platform, setPlatform] = useState('wechat');
+  const [active, setActive] = useState('popular');
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -92,7 +92,9 @@ export default function RankingWorkspace({ mode }: { mode: 'boards' | 'breakdown
     finally { setLoading(false); }
   }
   useEffect(() => { void reload(); }, []);
-  const board = data?.boards[active];
+  const group = data?.platforms?.[platform];
+  const boardKeys = Object.keys(group?.boards || {});
+  const board = group?.boards[active] || group?.boards[boardKeys[0]];
   const bestSell = data?.boards.bestSell;
   const selected = bestSell?.items.find(game => game.id === selectedId) || bestSell?.items[0];
   const analysis = selected ? hypotheses(selected) : null;
@@ -101,14 +103,15 @@ export default function RankingWorkspace({ mode }: { mode: 'boards' | 'breakdown
   const boardError = mode === 'boards' ? board?.error : bestSell?.error;
 
   return <div className="ranking-workspace">
-    <div className="page-heading ranking-heading"><div><span className="eyebrow">WECHAT GAME INTELLIGENCE</span><h1>{mode === 'boards' ? '游戏榜单' : '畅销游戏盈利拆解'}</h1><p>{mode === 'boards' ? '查看腾讯应用宝微信小游戏热门、畅销与新游排名' : '从畅销榜逐款研究产品定位与可能的盈利路径'}</p></div><button className="secondary-button" onClick={() => void reload(true)} disabled={loading} title="重新获取三个榜单"><RefreshCw size={16} className={loading ? 'ranking-spinning' : ''} />{loading ? '更新中' : '更新榜单'}</button></div>
-    <div className="ranking-source"><div><strong>腾讯应用宝 · 微信小游戏榜单</strong><span>{boardTime ? `采集时间：${new Date(boardTime).toLocaleString('zh-CN')}` : loading ? '正在获取榜单' : '尚无成功快照'}</span></div><a href={mode === 'boards' ? board?.url || data?.boards.popular.url : bestSell?.url} target="_blank" rel="noreferrer">查看来源 <ExternalLink size={14} /></a></div>
+    <div className="page-heading ranking-heading"><div><span className="eyebrow">GAME RANKINGS</span><h1>{mode === 'boards' ? '游戏榜单' : '畅销游戏盈利拆解'}</h1><p>{mode === 'boards' ? '查看各平台公开游戏榜单' : '从微信小游戏畅销榜逐款研究产品定位与可能的盈利路径'}</p></div><button className="secondary-button" onClick={() => void reload(true)} disabled={loading} title="重新获取公开榜单"><RefreshCw size={16} className={loading ? 'ranking-spinning' : ''} />{loading ? '更新中' : '更新榜单'}</button></div>
+    {mode === 'boards' && <div className="ranking-platforms" role="tablist" aria-label="游戏平台">{platformKeys.map(key => <button key={key} role="tab" aria-selected={platform === key} className={platform === key ? 'selected' : ''} onClick={() => { setPlatform(key); setActive(key === 'wechat' ? 'popular' : key === 'apple' ? 'free' : 'download'); setQuery(''); }}>{data?.platforms[key]?.label || ({ wechat: '微信小游戏', apple: 'App Store', taptap: 'TapTap', douyin: '抖音小游戏' } as Record<string, string>)[key]}</button>)}</div>}
+    <div className="ranking-source"><div><strong>{mode === 'boards' ? group?.scope || '公开游戏榜单' : '腾讯应用宝 · 微信小游戏榜单'}</strong><span>{group?.unavailable && mode === 'boards' ? '尚无可核验的公开排名' : boardTime ? `采集时间：${new Date(boardTime).toLocaleString('zh-CN')}` : loading ? '正在获取榜单' : '尚无成功快照'}</span></div>{(mode === 'boards' ? board?.url || group?.sourceUrl : bestSell?.url) && <a href={mode === 'boards' ? board?.url || group?.sourceUrl : bestSell?.url} target="_blank" rel="noreferrer">查看来源 <ExternalLink size={14} /></a>}</div>
     {(error || boardError) && <div className="ranking-warning" role="alert">{boardTime ? '本次更新失败，显示上次成功快照。' : '暂时无法获取榜单。'} {error || boardError}</div>}
-    {mode === 'boards' ? <>
-      <div className="ranking-controls"><div className="ranking-tabs" role="tablist" aria-label="榜单类型">{boardKeys.map(key => <button key={key} role="tab" aria-selected={active === key} className={active === key ? 'selected' : ''} onClick={() => { setActive(key); setQuery(''); }}>{boardNames[key]}</button>)}</div><label className="ranking-search"><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索榜单游戏" aria-label="搜索榜单游戏" /></label></div>
-      <div className="ranking-list-head"><strong>{boardNames[active]}</strong><span>{board?.items.length || 0} 款 · 页面展示顺序</span></div>
+    {mode === 'boards' ? group?.unavailable ? <div className="ranking-unavailable"><strong>抖音小游戏榜单暂未接入</strong><p>当前未核实到可稳定读取的公开官方榜单。取得授权接口或可验证的公开排名后，可在此展示；不会混用微信小游戏数据。</p></div> : <>
+      <div className="ranking-controls"><div className="ranking-tabs" role="tablist" aria-label="榜单类型">{boardKeys.map(key => <button key={key} role="tab" aria-selected={active === key} className={active === key ? 'selected' : ''} onClick={() => { setActive(key); setQuery(''); }}>{group?.boards[key].label}</button>)}</div><label className="ranking-search"><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="搜索榜单游戏" aria-label="搜索榜单游戏" /></label></div>
+      <div className="ranking-list-head"><strong>{board?.label || '榜单'}</strong><span>{board?.items.length || 0} 款 · 来源页面顺序</span></div>
       <div className="ranking-list">{filtered.map(game => <div className="ranking-row" key={game.id}><span className={`ranking-position ${game.rank <= 3 ? 'top' : ''}`}>{String(game.rank).padStart(2, '0')}</span><GameIcon game={game} /><div className="ranking-game"><strong>{game.name}</strong><span>{game.developer || '开发商未公开'}{game.tags.length ? ` · ${game.tags.slice(0, 2).join(' / ')}` : ''}</span></div><a href={game.url} target="_blank" rel="noreferrer" title={`查看${game.name}商品页`} aria-label={`查看${game.name}商品页`}><ExternalLink size={17} /></a></div>)}{!loading && !filtered.length && <div className="ranking-empty">{board?.items.length ? '没有匹配的游戏' : '暂无榜单数据'}</div>}</div>
-      <p className="ranking-footnote">排名为应用宝页面显示顺序，只代表该平台微信小游戏榜单，不代表全平台热度、真实销量或收入。</p>
+      <p className="ranking-footnote">排名仅代表{group?.scope}当次返回的顺序。App Store 畅销榜不公开实际收入；不同平台的名次不可直接比较。</p>
     </> : <>
       <div className="breakdown-layout"><div className="breakdown-rail"><div className="ranking-list-head"><strong>畅销榜游戏</strong><span>{bestSell?.items.length || 0} 款</span></div><div className="breakdown-game-list">{bestSell?.items.map(game => <button key={game.id} className={selected?.id === game.id ? 'selected' : ''} onClick={() => setSelectedId(game.id)}><span>{String(game.rank).padStart(2, '0')}</span><GameIcon game={game} /><strong>{game.name}</strong><ArrowRight size={15} /></button>)}{!loading && !bestSell?.items.length && <div className="ranking-empty">暂无畅销榜数据</div>}</div></div>
         <div className="breakdown-detail">{selected && analysis ? <><div className="breakdown-hero"><GameIcon game={selected} /><div><span className="breakdown-kicker">畅销榜第 {selected.rank} 名 · 腾讯应用宝微信小游戏</span><h2>{selected.name}</h2><p>{selected.developer || '开发商未公开'}{selected.tags.length ? ` · ${selected.tags.join(' / ')}` : ''}</p></div><a href={selected.url} target="_blank" rel="noreferrer" title="查看官方商品页"><ExternalLink size={17} /></a></div>
