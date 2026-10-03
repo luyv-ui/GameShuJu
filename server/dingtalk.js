@@ -1,5 +1,5 @@
 import { DWClient, TOPIC_ROBOT } from 'dingtalk-stream';
-import { answerQuery, answerRankingQuery, rankingQueryType } from './query.js';
+import { answerQuery, answerRankingQuery, rankingQueryRequest } from './query.js';
 
 const recentMessages = new Map();
 let activeClient;
@@ -40,8 +40,8 @@ export async function handleRobotMessage(message, getGames, getRankings) {
   botStatus.lastMessageAt = new Date().toISOString();
   try {
     const input = message.text.content.slice(0, 120);
-    const rankingType = rankingQueryType(input);
-    const content = rankingType && getRankings
+    const rankingRequest = rankingQueryRequest(input);
+    const content = rankingRequest && getRankings
       ? answerRankingQuery(await getRankings(), input, { webUrl: process.env.PUBLIC_WEB_URL })
       : answerQuery(getGames(), input, { webUrl: process.env.PUBLIC_WEB_URL });
     const response = await fetch(message.sessionWebhook, {

@@ -10,7 +10,7 @@ import { getScoreConfig, putScoreConfig } from './score-config.js';
 import { generateInvestmentReport, renderInvestmentReportPdf } from './report.js';
 import { createAuth } from './auth.js';
 import { createCatalogSync } from './catalog-sync.js';
-import { createRankings } from './rankings.js';
+import { createDouyinRankings, createRankings } from './rankings.js';
 import { collectSteamCharts } from './steamcharts.js';
 
 const app = express();
@@ -19,6 +19,20 @@ app.use('/api/auth/exchange', express.urlencoded({ extended: false, limit: '4kb'
 const auth = createAuth();
 const catalogSync = createCatalogSync();
 const rankings = createRankings();
+const douyinRankings = createDouyinRankings();
+async function getAllRankings(force = false) {
+  const [wechat, douyin] = await Promise.all([rankings.get(force), douyinRankings.get(force)]);
+  return {
+    ...wechat,
+    platforms: {
+      ...wechat.platforms,
+      douyin: { label: '\u6296\u97f3\u5c0f\u6e38\u620f', scope: `${douyin.source}（第三方日更 Top 10）`, boards: douyin.boards,
+        sourceUrl: 'https://www.momorank.com/douyin/rankings/popular' }
+    },
+    douyinSource: douyin.source,
+    douyinBoards: douyin.boards
+  };
+}
 auth.routes(app);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -35,7 +49,7 @@ app.get('/api/bot/status', (req, res) => {
 });
 app.get('/api/catalog-sync', auth.read, (req, res) => res.json(catalogSync.getStatus()));
 app.get('/api/rankings', auth.read, async (req, res) => {
-  try { res.json(await rankings.get(req.query.refresh === '1')); }
+  try { res.json(await getAllRankings(req.query.refresh === '1')); }
   catch { res.status(502).json({ error: '榜单暂时无法获取' }); }
 });
 app.post('/api/catalog-sync', auth.admin, (req, res) => {
@@ -128,4 +142,4 @@ if (process.env.STEAMCHARTS_SYNC_ENABLED !== 'false') {
   setTimeout(refreshPeaks, 30000).unref();
   setInterval(refreshPeaks, 24 * 60 * 60 * 1000).unref();
 }
-startDingTalkBot(listGames, () => rankings.get()).catch(error => console.error('DingTalk bot failed:', error));
+startDingTalkBot(listGames, () => getAllRankings()).catch(error => console.error('DingTalk bot failed:', error));

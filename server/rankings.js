@@ -9,6 +9,12 @@ export const rankingSources = {
   bestSell: { label: '畅销', url: 'https://sj.qq.com/wechat-game/best-sell-game-rank' },
   new: { label: '热门新游', url: 'https://sj.qq.com/wechat-game/new-game-rank' }
 };
+
+export const douyinRankingSources = {
+  popular: { label: '热门榜', url: 'https://www.momorank.com/douyin/rankings/popular' },
+  bestSell: { label: '畅销榜', url: 'https://www.momorank.com/douyin/rankings/bestseller' },
+  new: { label: '新游榜', url: 'https://www.momorank.com/douyin/rankings/new_game' }
+};
 export const appleRankingSources = {
   free: { label: '免费榜', url: 'https://itunes.apple.com/cn/rss/topfreeapplications/limit=100/genre=6014/json' },
   paid: { label: '付费榜', url: 'https://itunes.apple.com/cn/rss/toppaidapplications/limit=100/genre=6014/json' },
@@ -41,6 +47,35 @@ export function parseRanking(html) {
   }
   if (!items.length) throw new Error('来源页面没有有效榜单条目');
   return items;
+}
+
+export function parseDouyinRanking(html) {
+  const $ = load(html);
+  const bodyText = $('body').text().replace(/\s+/g, ' ');
+  const dataDate = bodyText.match(/数据日期\s*(20\d{2}-\d{2}-\d{2})/u)?.[1] || null;
+  const items = [];
+  $('table tbody tr').slice(0, 10).each((_, row) => {
+    const cells = $(row).find('td');
+    const link = $(row).find('a[href^="/douyin/games/"]').first();
+    const href = link.attr('href') || '';
+    const name = link.find('[title]').attr('title') || link.text().trim();
+    const rank = Number(cells.eq(0).text().trim());
+    if (!name || !href || !Number.isSafeInteger(rank) || rank < 1) return;
+    const category = cells.eq(2).text().replace(/\s+/g, ' ').trim();
+    items.push({
+      rank,
+      id: href.split('/').filter(Boolean).at(-1),
+      name,
+      icon: $(row).find('img').first().attr('src') || '',
+      developer: '',
+      tags: category ? [category] : [],
+      description: '',
+      change: cells.eq(3).text().replace(/\s+/g, ' ').trim(),
+      url: new URL(href, 'https://www.momorank.com').toString()
+    });
+  });
+  if (!items.length) throw new Error('来源页面没有免费公开的榜单条目');
+  return { items, dataDate };
 }
 
 export function parseAppleRanking(json) {
@@ -123,6 +158,35 @@ export function createRankings({ fetchPage = async url => {
         }
       }));
       return { source: '多平台公开游戏榜单', boards, platforms };
+    })();
+    try { return await pending; }
+    finally { pending = null; }
+  }
+  return { get };
+}
+
+export function createDouyinRankings({ fetchPage = async url => {
+  const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GameIntelligenceResearch/1.0)' }, signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.text();
+}, now = () => Date.now(), ttl = 30 * 60 * 1000 } = {}) {
+  const boards = Object.fromEntries(Object.entries(douyinRankingSources).map(([key, source]) => [key, { ...source, items: [], fetchedAt: null, dataDate: null, error: null }]));
+  let lastAttempt = 0;
+  let pending = null;
+  async function get(force = false) {
+    if (pending) return pending;
+    if (!force && lastAttempt && now() - lastAttempt < ttl) return { source: 'MomoRank \u6296\u97f3\u5c0f\u6e38\u620f公开榜单', boards };
+    lastAttempt = now();
+    pending = (async () => {
+      await Promise.all(Object.entries(douyinRankingSources).map(async ([key, source]) => {
+        try {
+          const parsed = parseDouyinRanking(await fetchPage(source.url));
+          boards[key] = { ...source, ...parsed, fetchedAt: new Date(now()).toISOString(), error: null };
+        } catch (error) {
+          boards[key] = { ...boards[key], error: error instanceof Error ? error.message : '采集失败' };
+        }
+      }));
+      return { source: 'MomoRank \u6296\u97f3\u5c0f\u6e38\u620f公开榜单', boards };
     })();
     try { return await pending; }
     finally { pending = null; }

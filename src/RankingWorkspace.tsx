@@ -4,12 +4,14 @@ import './rankings.css';
 import { apiUrl } from './api-url';
 
 type RankingGame = { rank: number; id: string; name: string; icon: string; developer: string; tags: string[]; description: string; url: string };
-type Board = { label: string; url: string; items: RankingGame[]; fetchedAt: string | null; error: string | null };
+type Board = { label: string; url: string; items: RankingGame[]; fetchedAt: string | null; dataDate?: string | null; error: string | null };
 type RankingGroup = { label: string; scope: string; boards: Record<string, Board>; unavailable?: boolean; sourceUrl?: string };
 type RankingData = { source: string; boards: Record<'popular' | 'bestSell' | 'new', Board>; platforms: Record<string, RankingGroup> };
 const platformKeys = ['wechat', 'apple', 'taptap', 'douyin'];
 const requestedBoard = new URLSearchParams(window.location.search).get('board');
 const initialBoard = ['popular', 'bestSell', 'new'].includes(requestedBoard || '') ? requestedBoard as string : 'popular';
+const requestedPlatform = new URLSearchParams(window.location.search).get('platform');
+const initialPlatform = platformKeys.includes(requestedPlatform || '') ? requestedPlatform as string : 'wechat';
 
 function requestWithXhr(url: string): Promise<RankingData> {
   return new Promise((resolve, reject) => {
@@ -81,7 +83,7 @@ function GameIcon({ game }: { game: RankingGame }) {
 
 export default function RankingWorkspace({ mode }: { mode: 'boards' | 'breakdown' }) {
   const [data, setData] = useState<RankingData | null>(null);
-  const [platform, setPlatform] = useState('wechat');
+  const [platform, setPlatform] = useState(initialPlatform);
   const [active, setActive] = useState(initialBoard);
   const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
@@ -95,6 +97,9 @@ export default function RankingWorkspace({ mode }: { mode: 'boards' | 'breakdown
     finally { setLoading(false); }
   }
   useEffect(() => { void reload(); }, []);
+  useEffect(() => {
+    if (platform === 'douyin' && !['popular', 'bestSell', 'new'].includes(active)) setActive('popular');
+  }, [platform, active]);
   const group = data?.platforms?.[platform];
   const boardKeys = Object.keys(group?.boards || {});
   const board = group?.boards[active] || group?.boards[boardKeys[0]];

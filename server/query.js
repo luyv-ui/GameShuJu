@@ -69,25 +69,32 @@ function recentReleaseIntent(compact) {
     || /^(近期发布|最近发布|最新发布|本月新游|新游)$/u.test(compact);
 }
 
-export function rankingQueryType(input = '') {
+export function rankingQueryRequest(input = '') {
   const compact = String(input).replace(/@\S+\s*/gu, '').replace(/[\s，。！？、：:；;]/gu, '');
   const hasRankingWord = /(榜|排名|前几|第一|最热|热门新游)/u.test(compact);
-  const hasWechatScope = /(微信|小游戏)/u.test(compact);
-  if (!hasRankingWord || !hasWechatScope) return null;
-  if (/(畅销|氪金|吸金|收入)/u.test(compact)) return 'bestSell';
-  if (/(新游|新上线|最新)/u.test(compact)) return 'new';
-  return 'popular';
+  const hasMiniGameScope = /(微信|抖音|小游戏)/u.test(compact);
+  if (!hasRankingWord || !hasMiniGameScope) return null;
+  const platform = /抖音/u.test(compact) ? 'douyin' : 'wechat';
+  if (/(畅销|氪金|吸金|收入)/u.test(compact)) return { platform, type: 'bestSell' };
+  if (/(新游|新上线|最新)/u.test(compact)) return { platform, type: 'new' };
+  return { platform, type: 'popular' };
+}
+
+export function rankingQueryType(input = '') {
+  return rankingQueryRequest(input)?.type || null;
 }
 
 export function answerRankingQuery(data, input, options = {}) {
-  const type = rankingQueryType(input);
-  if (!type) return null;
-  const board = data?.boards?.[type];
+  const request = rankingQueryRequest(input);
+  if (!request) return null;
+  const { platform, type } = request;
+  const board = platform === 'douyin' ? data?.douyinBoards?.[type] : data?.boards?.[type];
   const labels = { popular: '最受欢迎榜', bestSell: '畅销榜', new: '热门新游榜' };
-  const pageLink = content => appendWebLink(content, options.webUrl, { view: 'rankings', board: type });
+  const platformLabel = platform === 'douyin' ? '抖音小游戏' : '微信小游戏';
+  const pageLink = content => appendWebLink(content, options.webUrl, { view: 'rankings', platform, board: type });
   if (!board?.items?.length) {
     const reason = board?.error ? `本次获取失败：${board.error}` : '尚未生成榜单快照';
-    return pageLink(`微信小游戏${labels[type]}暂时没有可用数据。${reason}。`);
+    return pageLink(`${platformLabel}${labels[type]}暂时没有可用数据。${reason}。`);
   }
   const fetchedAt = board.fetchedAt
     ? new Date(board.fetchedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
@@ -97,13 +104,14 @@ export function answerRankingQuery(data, input, options = {}) {
     return `${item.rank}. ${item.name}${detail ? `（${detail}）` : ''}`;
   });
   return pageLink([
-    `微信小游戏${labels[type]}（前 ${top.length} 名）`,
-    `数据源：${data.source || '腾讯应用宝微信小游戏榜单'}`,
+    `${platformLabel}${labels[type]}（前 ${top.length} 名）`,
+    `数据源：${platform === 'douyin' ? data.douyinSource || 'MomoRank 公开榜单' : data.source || '腾讯应用宝微信小游戏榜单'}`,
+    ...(board.dataDate ? [`榜单日期：${board.dataDate}`] : []),
     `采集时间：${fetchedAt}`,
     '',
     ...top,
     '',
-    '口径：排名为来源页面展示顺序，不等于全平台真实销量或收入。'
+    `口径：排名为来源页面展示顺序，不等于全平台真实销量或收入。${platform === 'douyin' ? '抖音榜单为第三方日更公开 Top 10，非抖音官方 API。' : ''}`
   ].join('\n'));
 }
 
