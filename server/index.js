@@ -11,6 +11,7 @@ import { generateInvestmentReport, renderInvestmentReportPdf } from './report.js
 import { createAuth } from './auth.js';
 import { createCatalogSync } from './catalog-sync.js';
 import { createRankings } from './rankings.js';
+import { collectSteamCharts } from './steamcharts.js';
 
 const app = express();
 app.use(express.json({ limit: '8mb' }));
@@ -121,5 +122,10 @@ app.listen(port, host, () => console.log(`API listening on http://${host}:${port
 if (process.env.CATALOG_SYNC_ENABLED !== 'false') {
   setTimeout(() => void catalogSync.run().catch(error => console.error('Catalog sync failed:', error)), 10000).unref();
   setInterval(() => void catalogSync.run().catch(error => console.error('Catalog sync failed:', error)), 6 * 60 * 60 * 1000).unref();
+}
+if (process.env.STEAMCHARTS_SYNC_ENABLED !== 'false') {
+  const refreshPeaks = () => void collectSteamCharts(listGames()).catch(error => console.error('SteamCharts sync failed:', error));
+  setTimeout(refreshPeaks, 30000).unref();
+  setInterval(refreshPeaks, 24 * 60 * 60 * 1000).unref();
 }
 startDingTalkBot(listGames).catch(error => console.error('DingTalk bot failed:', error));

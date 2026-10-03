@@ -49,10 +49,12 @@ export type Game = {
   steamNewsCounts?: SteamNewsCounts;
   latestSteamNews?: SteamNewsItem[];
   steamCapturedAt?: string;
+  peakSourceUrl?: string;
+  peakCapturedAt?: string;
   hasLiveData?: boolean;
 };
 
-export type GameInput = Omit<Game, 'id' | 'updatedAt' | 'currentPlayers' | 'steamNewsCounts' | 'latestSteamNews' | 'steamCapturedAt' | 'hasLiveData'>;
+export type GameInput = Omit<Game, 'id' | 'updatedAt' | 'currentPlayers' | 'steamNewsCounts' | 'latestSteamNews' | 'steamCapturedAt' | 'peakSourceUrl' | 'peakCapturedAt' | 'hasLiveData'>;
 
 export type ProjectRisk = {
   id: string;

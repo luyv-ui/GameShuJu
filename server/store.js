@@ -8,6 +8,7 @@ const dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../d
 const defaultDataFile = path.join(dataDir, 'games.json');
 const seedFile = path.join(dataDir, 'seed.json');
 const steamDataFile = path.join(dataDir, 'collected', 'steam-latest.json');
+const steamChartsDataFile = () => process.env.STEAMCHARTS_DATA_FILE || path.join(dataDir, 'collected', 'steamcharts-latest.json');
 const dataFile = () => process.env.GAME_DATA_FILE || defaultDataFile;
 
 function readSteamData() {
@@ -35,18 +36,29 @@ function readBaseGames() {
 export function listGames() {
   const games = readBaseGames().map(game => ({ ...game, channel: gameChannel(game) }));
   const steamData = readSteamData();
-  if (!steamData) return games;
-  const byAppId = new Map(steamData.games.map(game => [Number(game.steamAppId), game]));
+  let chartData = { games: [] };
+  try { chartData = JSON.parse(fs.readFileSync(steamChartsDataFile(), 'utf8')); }
+  catch (error) { if (error.code !== 'ENOENT') console.error('Unable to read SteamCharts data:', error); }
+  const byPeakId = new Map((chartData.games || []).filter(item =>
+    Number.isSafeInteger(item.steamAppId) && Number.isSafeInteger(item.peakPlayers) && item.peakPlayers > 0 &&
+    item.sourceUrl === `https://steamcharts.com/app/${item.steamAppId}` && !Number.isNaN(Date.parse(item.capturedAt)))
+    .map(item => [item.steamAppId, item]));
+  if (!steamData && !byPeakId.size) return games;
+  const byAppId = new Map((steamData?.games || []).map(game => [Number(game.steamAppId), game]));
   return games.map(game => {
     const collected = byAppId.get(Number(game.steamAppId));
-    if (!collected || collected.status !== 'ok') return game;
+    const chart = game.sourceUrl?.startsWith(`https://store.steampowered.com/app/${game.steamAppId}/`) && !game.isDemo
+      ? byPeakId.get(Number(game.steamAppId)) : null;
     return {
       ...game,
-      currentPlayers: collected.currentPlayers,
-      steamNewsCounts: collected.newsCounts,
-      latestSteamNews: collected.news.slice(0, 5),
-      steamCapturedAt: collected.capturedAt,
-      hasLiveData: true
+      ...(chart && game.peakPlayers == null ? { peakPlayers: chart.peakPlayers, peakSourceUrl: chart.sourceUrl, peakCapturedAt: chart.capturedAt } : {}),
+      ...(collected?.status === 'ok' ? {
+        currentPlayers: collected.currentPlayers,
+        steamNewsCounts: collected.newsCounts,
+        latestSteamNews: collected.news.slice(0, 5),
+        steamCapturedAt: collected.capturedAt,
+        hasLiveData: true
+      } : {})
     };
   });
 }

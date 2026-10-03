@@ -1,0 +1,191 @@
+{
+  "source": "SteamCharts",
+  "games": [
+    {
+      "steamAppId": 2358720,
+      "peakPlayers": 2406967,
+      "sourceUrl": "https://steamcharts.com/app/2358720",
+      "capturedAt": "2026-10-03T09:03:00.308Z"
+    },
+    {
+      "steamAppId": 1245620,
+      "peakPlayers": 952523,
+      "sourceUrl": "https://steamcharts.com/app/1245620",
+      "capturedAt": "2026-10-03T09:03:00.638Z"
+    },
+    {
+      "steamAppId": 1623730,
+      "peakPlayers": 2101535,
+      "sourceUrl": "https://steamcharts.com/app/1623730",
+      "capturedAt": "2026-10-03T09:03:00.975Z"
+    },
+    {
+      "steamAppId": 413150,
+      "peakPlayers": 236614,
+      "sourceUrl": "https://steamcharts.com/app/413150",
+      "capturedAt": "2026-10-03T09:03:01.307Z"
+    },
+    {
+      "steamAppId": 1145360,
+      "peakPlayers": 54015,
+      "sourceUrl": "https://steamcharts.com/app/1145360",
+      "capturedAt": "2026-10-03T09:03:01.701Z"
+    },
+    {
+      "steamAppId": 367520,
+      "peakPlayers": 95428,
+      "sourceUrl": "https://steamcharts.com/app/367520",
+      "capturedAt": "2026-10-03T09:03:02.062Z"
+    },
+    {
+      "steamAppId": 1091500,
+      "peakPlayers": 830387,
+      "sourceUrl": "https://steamcharts.com/app/1091500",
+      "capturedAt": "2026-10-03T09:03:02.420Z"
+    },
+    {
+      "steamAppId": 1868140,
+      "peakPlayers": 98281,
+      "sourceUrl": "https://steamcharts.com/app/1868140",
+      "capturedAt": "2026-10-03T09:03:02.759Z"
+    },
+    {
+      "steamAppId": 1794680,
+      "peakPlayers": 77061,
+      "sourceUrl": "https://steamcharts.com/app/1794680",
+      "capturedAt": "2026-10-03T09:03:03.103Z"
+    },
+    {
+      "steamAppId": 646570,
+      "peakPlayers": 56201,
+      "sourceUrl": "https://steamcharts.com/app/646570",
+      "capturedAt": "2026-10-03T09:03:03.451Z"
+    },
+    {
+      "steamAppId": 1426210,
+      "peakPlayers": 69976,
+      "sourceUrl": "https://steamcharts.com/app/1426210",
+      "capturedAt": "2026-10-03T09:03:03.809Z"
+    },
+    {
+      "steamAppId": 2379780,
+      "peakPlayers": 43825,
+      "sourceUrl": "https://steamcharts.com/app/2379780",
+      "capturedAt": "2026-10-03T09:03:04.152Z"
+    },
+    {
+      "steamAppId": 1086940,
+      "peakPlayers": 875343,
+      "sourceUrl": "https://steamcharts.com/app/1086940",
+      "capturedAt": "2026-10-03T09:03:04.487Z"
+    },
+    {
+      "steamAppId": 990080,
+      "peakPlayers": 527652,
+      "sourceUrl": "https://steamcharts.com/app/990080",
+      "capturedAt": "2026-10-03T09:03:04.822Z"
+    },
+    {
+      "steamAppId": 105600,
+      "peakPlayers": 486918,
+      "sourceUrl": "https://steamcharts.com/app/105600",
+      "capturedAt": "2026-10-03T09:03:05.313Z"
+    },
+    {
+      "steamAppId": 255710,
+      "peakPlayers": 57421,
+      "sourceUrl": "https://steamcharts.com/app/255710",
+      "capturedAt": "2026-10-03T09:03:06.092Z"
+    },
+    {
+      "steamAppId": 264710,
+      "peakPlayers": 50876,
+      "sourceUrl": "https://steamcharts.com/app/264710",
+      "capturedAt": "2026-10-03T09:03:06.524Z"
+    },
+    {
+      "steamAppId": 620,
+      "peakPlayers": 14984,
+      "sourceUrl": "https://steamcharts.com/app/620",
+      "capturedAt": "2026-10-03T09:03:06.942Z"
+    },
+    {
+      "steamAppId": 1203220,
+      "peakPlayers": 385770,
+      "sourceUrl": "https://steamcharts.com/app/1203220",
+      "capturedAt": "2026-10-03T09:03:07.329Z"
+    },
+    {
+      "steamAppId": 1326470,
+      "peakPlayers": 411804,
+      "sourceUrl": "https://steamcharts.com/app/1326470",
+      "capturedAt": "2026-10-03T09:03:07.661Z"
+    },
+    {
+      "steamAppId": 1966720,
+      "peakPlayers": 239369,
+      "sourceUrl": "https://steamcharts.com/app/1966720",
+      "capturedAt": "2026-10-03T09:03:07.996Z"
+    },
+    {
+      "steamAppId": 1092790,
+      "peakPlayers": 17044,
+      "sourceUrl": "https://steamcharts.com/app/1092790",
+      "capturedAt": "2026-10-03T09:03:08.354Z"
+    },
+    {
+      "steamAppId": 427520,
+      "peakPlayers": 118166,
+      "sourceUrl": "https://steamcharts.com/app/427520",
+      "capturedAt": "2026-10-03T09:03:08.692Z"
+    },
+    {
+      "steamAppId": 578080,
+      "peakPlayers": 3236027,
+      "sourceUrl": "https://steamcharts.com/app/578080",
+      "capturedAt": "2026-10-03T09:03:09.031Z"
+    },
+    {
+      "steamAppId": 730,
+      "peakPlayers": 1818368,
+      "sourceUrl": "https://steamcharts.com/app/730",
+      "capturedAt": "2026-10-03T09:03:09.366Z"
+    },
+    {
+      "steamAppId": 1172470,
+      "peakPlayers": 624473,
+      "sourceUrl": "https://steamcharts.com/app/1172470",
+      "capturedAt": "2026-10-03T09:03:09.714Z"
+    },
+    {
+      "steamAppId": 2096610,
+      "peakPlayers": 529,
+      "sourceUrl": "https://steamcharts.com/app/2096610",
+      "capturedAt": "2026-10-03T09:03:10.044Z"
+    },
+    {
+      "steamAppId": 250900,
+      "peakPlayers": 155966,
+      "sourceUrl": "https://steamcharts.com/app/250900",
+      "capturedAt": "2026-10-03T09:03:10.388Z"
+    },
+    {
+      "steamAppId": 588650,
+      "peakPlayers": 14880,
+      "sourceUrl": "https://steamcharts.com/app/588650",
+      "capturedAt": "2026-10-03T09:03:10.766Z"
+    },
+    {
+      "steamAppId": 632360,
+      "peakPlayers": 74945,
+      "sourceUrl": "https://steamcharts.com/app/632360",
+      "capturedAt": "2026-10-03T09:03:11.126Z"
+    },
+    {
+      "steamAppId": 391540,
+      "peakPlayers": 11071,
+      "sourceUrl": "https://steamcharts.com/app/391540",
+      "capturedAt": "2026-10-03T09:03:11.483Z"
+    }
+  ]
+}

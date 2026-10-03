@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Game Intelligence backup
+
+[Timer]
+OnCalendar=*-*-* 02:45:00
+Persistent=true
+Unit=game-intelligence-backup.service
+
+[Install]
+WantedBy=timers.target

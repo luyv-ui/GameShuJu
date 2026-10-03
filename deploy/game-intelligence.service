@@ -1,0 +1,22 @@
+[Unit]
+Description=Game Intelligence Hub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gameintel
+Group=gameintel
+WorkingDirectory=/opt/game-intelligence/current
+EnvironmentFile=/etc/game-intelligence/game-intelligence.env
+ExecStart=/opt/game-intelligence/node/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/game-intelligence
+
+[Install]
+WantedBy=multi-user.target

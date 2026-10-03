@@ -11,6 +11,7 @@
     "start": "node server/index.js",
     "test": "node --test server/*.test.js scripts/*.test.mjs",
     "collect:steam": "node scripts/collect-steam.mjs",
+    "collect:steamcharts": "node scripts/collect-steamcharts.mjs",
     "migrate:sqlite": "node scripts/migrate-to-sqlite.mjs",
     "backup:sqlite": "node scripts/sqlite-backup.mjs backup",
     "restore:sqlite": "node scripts/sqlite-backup.mjs restore",
