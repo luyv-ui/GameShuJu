@@ -1,8 +1,8 @@
-export function searchGames(games, query = '', genre = '全部', platform = '全部') {
+export function searchGames(games, query = '', genre = '全部', platform = '全部', channel = '全部') {
   const keyword = String(query).trim().toLocaleLowerCase();
   return games.filter(game => {
     const haystack = [game.name, game.englishName, game.developer, game.publisher, ...(game.tags || [])].join(' ').toLocaleLowerCase();
-    return (!keyword || haystack.includes(keyword)) && (genre === '全部' || game.genre === genre) && (platform === '全部' || game.platforms.includes(platform));
+    return (!keyword || haystack.includes(keyword)) && (genre === '全部' || game.genre === genre) && (platform === '全部' || game.platforms.includes(platform)) && (channel === '全部' || game.channel === channel);
   });
 }
 
@@ -11,10 +11,24 @@ function formatNumber(value) {
 }
 
 function formatGame(game) {
+  const metrics = [];
+  if (game.rating != null) metrics.push(`好评率：${game.rating}%`);
+  if (game.price != null) metrics.push(`${game.steamAppId ? '中国区售价' : '售价'}：${game.steamAppId ? '¥' : ''}${game.price}`);
+  if (game.sourceExtras?.usRatingOutOf5 != null) metrics.push(`App Store 评分：${game.sourceExtras.usRatingOutOf5}/5`);
+  if (game.sourceExtras?.usPriceUsd != null) metrics.push(`美国区售价：US$${game.sourceExtras.usPriceUsd}`);
   const live = game.hasLiveData
     ? `\nSteam 实采：当前在线 ${formatNumber(game.currentPlayers)}｜近90天公告 ${game.steamNewsCounts?.last90Days ?? 0} 条\n采集时间：${game.steamCapturedAt}`
     : '';
-  return `${game.name}（${game.englishName || game.genre}）\n类型：${game.genre}｜平台：${game.platforms.join('、') || '未录入'}${live}${game.isDemo ? '\n注：价格、评分等基础指标仍为演示数据' : ''}${game.sourceUrl ? `\n来源：${game.sourceUrl}` : ''}`;
+  return [
+    `${game.name}（${game.englishName || game.genre}）`,
+    `类型：${game.genre}｜平台：${game.platforms.join('、') || '未录入'}`,
+    metrics.length ? metrics.join('｜') : '指标：未取得可比数据',
+    live.trim(),
+    game.isDemo ? '注：指标为演示数据' : '',
+    game.dataAsOf ? `采集日期：${game.dataAsOf}` : '',
+    game.metricScope ? `口径：${game.metricScope}` : '',
+    game.sourceUrl ? `来源：${game.sourceUrl}` : ''
+  ].filter(Boolean).join('\n');
 }
 
 function appendWebLink(content, webUrl) {

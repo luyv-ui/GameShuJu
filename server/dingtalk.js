@@ -17,6 +17,7 @@ export function getDingTalkBotStatus() {
 }
 
 function rememberMessage(id) {
+  if (!id) return true;
   const now = Date.now();
   for (const [key, time] of recentMessages) if (now - time > 10 * 60 * 1000) recentMessages.delete(key);
   if (recentMessages.has(id)) return false;
@@ -33,19 +34,25 @@ function validWebhook(value) {
 
 export async function handleRobotMessage(message, getGames) {
   const corpId = process.env.DINGTALK_CORP_ID;
-  if (!message.senderCorpId || message.senderCorpId !== message.chatbotCorpId || (corpId && message.senderCorpId !== corpId)) return;
+  if (!message?.senderCorpId || message.senderCorpId !== message.chatbotCorpId || (corpId && message.senderCorpId !== corpId)) return;
   if (message.msgtype !== 'text' || !message.text?.content || !validWebhook(message.sessionWebhook)) return;
   if (!rememberMessage(message.msgId)) return;
   botStatus.lastMessageAt = new Date().toISOString();
-  const content = answerQuery(getGames(), message.text.content.slice(0, 120), { webUrl: process.env.PUBLIC_WEB_URL });
-  const response = await fetch(message.sessionWebhook, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ msgtype: 'text', text: { content } })
-  });
-  if (!response.ok) throw new Error(`DingTalk reply failed: HTTP ${response.status}`);
-  botStatus.lastReplyAt = new Date().toISOString();
-  botStatus.lastError = null;
+  try {
+    const content = answerQuery(getGames(), message.text.content.slice(0, 120), { webUrl: process.env.PUBLIC_WEB_URL });
+    const response = await fetch(message.sessionWebhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ msgtype: 'text', text: { content } })
+    });
+    if (!response.ok) throw new Error(`DingTalk reply failed: HTTP ${response.status}`);
+    botStatus.lastReplyAt = new Date().toISOString();
+    botStatus.lastError = null;
+  } catch (error) {
+    if (message.msgId) recentMessages.delete(message.msgId);
+    botStatus.lastError = error.message;
+    throw error;
+  }
 }
 
 export async function startDingTalkBot(getGames) {

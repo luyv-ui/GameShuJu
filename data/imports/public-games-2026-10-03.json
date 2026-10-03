@@ -1,0 +1,1344 @@
+{
+  "title": "公开游戏情报样本",
+  "fetchedAt": "2026-10-03T06:07:30.545Z",
+  "methodology": "人工选取跨类型的 Steam PC、美国区 iOS、Google Play Android 和主机官方商店样本；非随机、非全量。Steam 评价为公开评论汇总，好评率=好评数/(好评数+差评数)。Steam 中国区原价可能随地区与时间变化。其他商店仅核验商品页面，未取得可比指标的字段写 null。",
+  "sources": [
+    "Steam 商店公开商品与评论接口",
+    "Apple iTunes Search API（美国区）",
+    "Google Play、PlayStation、Xbox 与 Nintendo 官方商品页面"
+  ],
+  "limitations": [
+    "样本不能推断全球市场份额或收入",
+    "不含非公开销量/收入及完整区域/平台覆盖",
+    "App Store 星级评分与 Steam 好评率不可直接比较",
+    "Steam 在线峰值未采集"
+  ],
+  "games": [
+    {
+      "name": "Stardew Valley",
+      "englishName": "Stardew Valley",
+      "genre": "模拟经营",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2016-02-25",
+      "developer": "ConcernedApe",
+      "publisher": "ConcernedApe",
+      "price": 48,
+      "rating": 98,
+      "reviewCount": 1041722,
+      "peakPlayers": null,
+      "tags": [
+        "RPG",
+        "Simulation"
+      ],
+      "description": "You've inherited your grandfather's old farm plot in Stardew Valley. Armed with hand-me-down tools and a few coins, you set out to begin your new life. Can you learn to live off the land and turn these overgrown fields into a thriving home?",
+      "steamAppId": 413150,
+      "sourceUrl": "https://store.steampowered.com/app/413150/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/413150?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Hades",
+      "englishName": "Hades",
+      "genre": "动作Roguelike",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2020-09-16",
+      "developer": "Supergiant Games",
+      "publisher": "Supergiant Games",
+      "price": 92,
+      "rating": 98,
+      "reviewCount": 309182,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "RPG"
+      ],
+      "description": "Defy the god of the dead as you hack and slash out of the Underworld in this rogue-like dungeon crawler from the creators of Bastion, Transistor, and Pyre.",
+      "steamAppId": 1145360,
+      "sourceUrl": "https://store.steampowered.com/app/1145360/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1145360?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Hollow Knight",
+      "englishName": "Hollow Knight",
+      "genre": "平台动作",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2017-02-23",
+      "developer": "Team Cherry",
+      "publisher": "Team Cherry",
+      "price": 58,
+      "rating": 97,
+      "reviewCount": 563524,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure"
+      ],
+      "description": "Forge your own path in Hollow Knight! An epic action adventure through a vast ruined kingdom of insects and heroes. Explore twisting caverns, battle tainted creatures and befriend bizarre bugs, all in a classic, hand-drawn 2D style.",
+      "steamAppId": 367520,
+      "sourceUrl": "https://store.steampowered.com/app/367520/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/367520?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Vampire Survivors",
+      "englishName": "Vampire Survivors",
+      "genre": "生存Roguelike",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2022-10-19",
+      "developer": "poncle",
+      "publisher": "poncle",
+      "price": 25,
+      "rating": 98,
+      "reviewCount": 266125,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Casual",
+        "RPG"
+      ],
+      "description": "Mow down thousands of night creatures and survive until dawn! Vampire Survivors is a gothic horror casual game with rogue-lite elements, where your choices can allow you to quickly snowball against the hundreds of monsters that get thrown at you. Be the bullet hell!",
+      "steamAppId": 1794680,
+      "sourceUrl": "https://store.steampowered.com/app/1794680/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1794680?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Slay the Spire",
+      "englishName": "Slay the Spire",
+      "genre": "策略卡牌",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2019-01-22",
+      "developer": "Mega Crit",
+      "publisher": "Mega Crit",
+      "price": 88,
+      "rating": 97,
+      "reviewCount": 219036,
+      "peakPlayers": null,
+      "tags": [
+        "Strategy"
+      ],
+      "description": "We fused card games and roguelikes together to make the best single player deckbuilder we could. Craft a unique deck, encounter bizarre creatures, discover relics of immense power, and Slay the Spire!",
+      "steamAppId": 646570,
+      "sourceUrl": "https://store.steampowered.com/app/646570/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/646570?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Balatro",
+      "englishName": "Balatro",
+      "genre": "策略卡牌",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2024-02-19",
+      "developer": "LocalThunk",
+      "publisher": "Playstack",
+      "price": 54,
+      "rating": 98,
+      "reviewCount": 199345,
+      "peakPlayers": null,
+      "tags": [
+        "Casual",
+        "Strategy"
+      ],
+      "description": "The poker roguelike. Balatro is a hypnotically satisfying deckbuilder where you play illegal poker hands, discover game-changing jokers, and trigger adrenaline-pumping, outrageous combos.",
+      "steamAppId": 2379780,
+      "sourceUrl": "https://store.steampowered.com/app/2379780/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/2379780?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "DAVE THE DIVER",
+      "englishName": "DAVE THE DIVER",
+      "genre": "模拟经营",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2023-06-27",
+      "developer": "MINTROCKET",
+      "publisher": "MINTROCKET",
+      "price": 80,
+      "rating": 96,
+      "reviewCount": 163063,
+      "peakPlayers": null,
+      "tags": [
+        "Adventure",
+        "Casual",
+        "RPG",
+        "Simulation"
+      ],
+      "description": "DAVE THE DIVER is a casual, singleplayer adventure RPG featuring deep-sea exploration and fishing during the day and sushi restaurant management at night. Join Dave and his quirky friends as they seek to uncover the secrets of the mysterious Blue Hole.",
+      "steamAppId": 1868140,
+      "sourceUrl": "https://store.steampowered.com/app/1868140/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1868140?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Palworld",
+      "englishName": "Palworld",
+      "genre": "生存建造",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2026-07-08",
+      "developer": "Pocketpair",
+      "publisher": "Pocketpair",
+      "price": 108,
+      "rating": 95,
+      "reviewCount": 490865,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "RPG"
+      ],
+      "description": "Fight, farm, build and work alongside mysterious creatures called &quot;Pals&quot; in this completely new multiplayer, open world survival and crafting game!",
+      "steamAppId": 1623730,
+      "sourceUrl": "https://store.steampowered.com/app/1623730/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1623730?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Black Myth: Wukong",
+      "englishName": "Black Myth: Wukong",
+      "genre": "动作角色扮演",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2024-08-18",
+      "developer": "Game Science",
+      "publisher": "Game Science",
+      "price": 268,
+      "rating": 96,
+      "reviewCount": 1213034,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "RPG"
+      ],
+      "description": "Black Myth: Wukong is an action RPG rooted in Chinese mythology. You shall set out as the Destined One to venture into the challenges and marvels ahead, to uncover the obscured truth beneath the veil of a glorious legend from the past.",
+      "steamAppId": 2358720,
+      "sourceUrl": "https://store.steampowered.com/app/2358720/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/2358720?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "ELDEN RING",
+      "englishName": "ELDEN RING",
+      "genre": "动作角色扮演",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2022-02-23",
+      "developer": "FromSoftware, Inc.",
+      "publisher": "FromSoftware, Inc.、Bandai Namco Entertainment",
+      "price": 298,
+      "rating": 93,
+      "reviewCount": 1157312,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "RPG"
+      ],
+      "description": "THE CRITICALLY ACCLAIMED FANTASY ACTION RPG. Rise, Tarnished, and be guided by grace to brandish the power of the Elden Ring and become an Elden Lord in the Lands Between.",
+      "steamAppId": 1245620,
+      "sourceUrl": "https://store.steampowered.com/app/1245620/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1245620?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Cyberpunk 2077",
+      "englishName": "Cyberpunk 2077",
+      "genre": "角色扮演",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2020-12-08",
+      "developer": "CD PROJEKT RED",
+      "publisher": "CD PROJEKT RED",
+      "price": 298,
+      "rating": 87,
+      "reviewCount": 983244,
+      "peakPlayers": null,
+      "tags": [
+        "RPG"
+      ],
+      "description": "Cyberpunk 2077 is an open-world, action-adventure RPG set in the dark future of Night City — a dangerous megalopolis obsessed with power, glamor, and ceaseless body modification.",
+      "steamAppId": 1091500,
+      "sourceUrl": "https://store.steampowered.com/app/1091500/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1091500?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "It Takes Two",
+      "englishName": "It Takes Two",
+      "genre": "合作冒险",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2021-03-24",
+      "developer": "Hazelight Studios",
+      "publisher": "Electronic Arts",
+      "price": 198,
+      "rating": 95,
+      "reviewCount": 270921,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure"
+      ],
+      "description": "Embark on the craziest journey of your life in It Takes Two. Invite a friend to join for free with Friend’s Pass and work together across a huge variety of gleefully disruptive gameplay challenges. Winner of GAME OF THE YEAR at the Game Awards 2021.",
+      "steamAppId": 1426210,
+      "sourceUrl": "https://store.steampowered.com/app/1426210/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1426210?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Baldur's Gate 3",
+      "englishName": "Baldur's Gate 3",
+      "genre": "角色扮演",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2023-08-02",
+      "developer": "Larian Studios",
+      "publisher": "Larian Studios",
+      "price": 298,
+      "rating": 97,
+      "reviewCount": 860271,
+      "peakPlayers": null,
+      "tags": [
+        "Adventure",
+        "RPG",
+        "Strategy"
+      ],
+      "description": "Baldur’s Gate 3 is a story-rich, party-based RPG set in the universe of Dungeons &amp; Dragons, where your choices shape a tale of fellowship and betrayal, survival and sacrifice, and the lure of absolute power.",
+      "steamAppId": 1086940,
+      "sourceUrl": "https://store.steampowered.com/app/1086940/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1086940?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Hogwarts Legacy",
+      "englishName": "Hogwarts Legacy",
+      "genre": "合作冒险",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2023-02-09",
+      "developer": "Avalanche Software",
+      "publisher": "Warner Bros. Games",
+      "price": 384,
+      "rating": 90,
+      "reviewCount": 374492,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "RPG"
+      ],
+      "description": "Hogwarts Legacy is an immersive, open-world action RPG. Now you can take control of the action and be at the center of your own adventure in the wizarding world.",
+      "steamAppId": 990080,
+      "sourceUrl": "https://store.steampowered.com/app/990080/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/990080?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Terraria",
+      "englishName": "Terraria",
+      "genre": "生存建造",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2011-05-15",
+      "developer": "Re-Logic",
+      "publisher": "Re-Logic",
+      "price": 42,
+      "rating": 97,
+      "reviewCount": 1559162,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "RPG"
+      ],
+      "description": "Dig, fight, explore, build! Nothing is impossible in this action-packed adventure game. Four Pack also available!",
+      "steamAppId": 105600,
+      "sourceUrl": "https://store.steampowered.com/app/105600/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/105600?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Cities: Skylines",
+      "englishName": "Cities: Skylines",
+      "genre": "城市建造",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2015-03-09",
+      "developer": "Colossal Order",
+      "publisher": "Paradox Interactive",
+      "price": 138,
+      "rating": 93,
+      "reviewCount": 291242,
+      "peakPlayers": null,
+      "tags": [
+        "Simulation",
+        "Strategy"
+      ],
+      "description": "Cities: Skylines is a modern take on the classic city simulation. The game introduces new game play elements to realize the thrill and hardships of creating and maintaining a real city whilst expanding on some well-established tropes of the city building experience.",
+      "steamAppId": 255710,
+      "sourceUrl": "https://store.steampowered.com/app/255710/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/255710?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Subnautica",
+      "englishName": "Subnautica",
+      "genre": "解谜",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2018-01-22",
+      "developer": "Unknown Worlds Entertainment",
+      "publisher": "Unknown Worlds Entertainment",
+      "price": 149,
+      "rating": 97,
+      "reviewCount": 380980,
+      "peakPlayers": null,
+      "tags": [
+        "Adventure"
+      ],
+      "description": "Descend into the depths of an alien underwater world filled with wonder and peril. Craft equipment, pilot submarines and out-smart wildlife to explore lush coral reefs, volcanoes, cave systems, and more - all while trying to survive.",
+      "steamAppId": 264710,
+      "sourceUrl": "https://store.steampowered.com/app/264710/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/264710?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Portal 2",
+      "englishName": "Portal 2",
+      "genre": "解谜",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2011-04-17",
+      "developer": "Valve",
+      "publisher": "Valve",
+      "price": 42,
+      "rating": 99,
+      "reviewCount": 467467,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure"
+      ],
+      "description": "The &quot;Perpetual Testing Initiative&quot; has been expanded to allow you to design co-op puzzles for you and your friends!",
+      "steamAppId": 620,
+      "sourceUrl": "https://store.steampowered.com/app/620/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/620?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "NARAKA: BLADEPOINT",
+      "englishName": "NARAKA: BLADEPOINT",
+      "genre": "多人竞技",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2021-08-10",
+      "developer": "24 Entertainment",
+      "publisher": "NetEase Games ",
+      "price": 0,
+      "rating": 73,
+      "reviewCount": 303068,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "Massively Multiplayer",
+        "Free To Play"
+      ],
+      "description": "Dive into the legends of the Far East in NARAKA: BLADEPOINT; team up with friends in fast-paced melee fights for a Battle Royale experience unlike any other. Find your playstyle with a varied cast of heroes with unique skills. More than 40 million players have already joined the fray, play free now!",
+      "steamAppId": 1203220,
+      "sourceUrl": "https://store.steampowered.com/app/1203220/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1203220?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Sons Of The Forest",
+      "englishName": "Sons Of The Forest",
+      "genre": "生存建造",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2024-02-21",
+      "developer": "Endnight Games Ltd",
+      "publisher": "Newnight ",
+      "price": 108,
+      "rating": 88,
+      "reviewCount": 321332,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "Simulation"
+      ],
+      "description": "Sent to find a missing billionaire on a remote island, you find yourself in a cannibal-infested hellscape. Craft, build, and struggle to survive, alone or with friends, in this terrifying new open-world survival horror simulator.",
+      "steamAppId": 1326470,
+      "sourceUrl": "https://store.steampowered.com/app/1326470/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1326470?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Lethal Company",
+      "englishName": "Lethal Company",
+      "genre": "合作恐怖",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2023-10-22",
+      "developer": "Zeekerss",
+      "publisher": "Zeekerss",
+      "price": 42,
+      "rating": 97,
+      "reviewCount": 511178,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "Early Access"
+      ],
+      "description": "A co-op horror about scavenging at abandoned moons to sell scrap to the Company.",
+      "steamAppId": 1966720,
+      "sourceUrl": "https://store.steampowered.com/app/1966720/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1966720?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Inscryption",
+      "englishName": "Inscryption",
+      "genre": "策略卡牌",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2021-10-18",
+      "developer": "Daniel Mullins Games",
+      "publisher": "Devolver Digital",
+      "price": 88,
+      "rating": 97,
+      "reviewCount": 148902,
+      "peakPlayers": null,
+      "tags": [
+        "Adventure",
+        "Strategy"
+      ],
+      "description": "Inscryption is an inky black card-based odyssey that blends the deckbuilding roguelike, escape-room style puzzles, and psychological horror into a blood-laced smoothie. Darker still are the secrets inscrybed upon the cards...",
+      "steamAppId": 1092790,
+      "sourceUrl": "https://store.steampowered.com/app/1092790/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1092790?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Factorio",
+      "englishName": "Factorio",
+      "genre": "工厂建造",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2020-08-13",
+      "developer": "Wube Software LTD.",
+      "publisher": "Wube Software LTD.",
+      "price": 130,
+      "rating": 98,
+      "reviewCount": 235354,
+      "peakPlayers": null,
+      "tags": [
+        "Casual",
+        "Simulation",
+        "Strategy"
+      ],
+      "description": "Factorio is a game about building and creating automated factories to produce items of increasing complexity, within an infinite 2D world. Use your imagination to design your factory, combine simple elements into ingenious structures, and finally protect it from the creatures who don't really like you.",
+      "steamAppId": 427520,
+      "sourceUrl": "https://store.steampowered.com/app/427520/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/427520?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "PUBG: BATTLEGROUNDS",
+      "englishName": "PUBG: BATTLEGROUNDS",
+      "genre": "多人竞技",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2017-12-20",
+      "developer": "PUBG Corporation",
+      "publisher": "KRAFTON, Inc.",
+      "price": 0,
+      "rating": 60,
+      "reviewCount": 2784954,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "Massively Multiplayer",
+        "Free To Play"
+      ],
+      "description": "PUBG: BATTLEGROUNDS, the high-stakes winner-take-all shooter that started the Battle Royale craze, is free-to-play! Drop into diverse maps, loot unique weapons and supplies, and survive in an ever-shrinking zone where every turn could be your last.",
+      "steamAppId": 578080,
+      "sourceUrl": "https://store.steampowered.com/app/578080/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/578080?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Counter-Strike 2",
+      "englishName": "Counter-Strike 2",
+      "genre": "多人竞技",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2017-09-14",
+      "developer": "Valve",
+      "publisher": "Valve",
+      "price": 0,
+      "rating": 86,
+      "reviewCount": 9898477,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Free To Play"
+      ],
+      "description": "For over two decades, Counter-Strike has offered an elite competitive experience, one shaped by millions of players from across the globe. And now the next chapter in the CS story is about to begin. This is Counter-Strike 2.",
+      "steamAppId": 730,
+      "sourceUrl": "https://store.steampowered.com/app/730/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/730?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Apex Legends™",
+      "englishName": "Apex Legends™",
+      "genre": "多人竞技",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2020-11-03",
+      "developer": "Respawn",
+      "publisher": "Electronic Arts",
+      "price": 0,
+      "rating": 68,
+      "reviewCount": 1071730,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure",
+        "Free To Play"
+      ],
+      "description": "Apex Legends is the award-winning, free-to-play Hero Shooter from Respawn Entertainment. Master an ever-growing roster of legendary characters with powerful abilities, and experience strategic squad play and innovative gameplay in the next evolution of Hero Shooter and Battle Royale.",
+      "steamAppId": 1172470,
+      "sourceUrl": "https://store.steampowered.com/app/1172470/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/1172470?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Crysis 3 Remastered",
+      "englishName": "Crysis 3 Remastered",
+      "genre": "射击",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2022-11-16",
+      "developer": "Crytek、Saber Interactive",
+      "publisher": "Crytek",
+      "price": 123,
+      "rating": 88,
+      "reviewCount": 8300,
+      "peakPlayers": null,
+      "tags": [
+        "Action"
+      ],
+      "description": "Experience the single-player experience from the iconic first-person shooter, Crysis 3, optimized to take advantage of today's hardware in Crysis 3 Remastered.",
+      "steamAppId": 2096610,
+      "sourceUrl": "https://store.steampowered.com/app/2096610/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/2096610?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "The Binding of Isaac: Rebirth",
+      "englishName": "The Binding of Isaac: Rebirth",
+      "genre": "Roguelike",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2014-11-03",
+      "developer": "Nicalis, Inc.、Edmund McMillen",
+      "publisher": "Nicalis, Inc.",
+      "price": 48,
+      "rating": 97,
+      "reviewCount": 459908,
+      "peakPlayers": null,
+      "tags": [
+        "Action"
+      ],
+      "description": "The Binding of Isaac: Rebirth is a randomly generated action RPG shooter with heavy Rogue-like elements. Following Isaac on his journey players will find bizarre treasures that change Isaac’s form giving him super human abilities and enabling him to fight off droves of mysterious creatures, discover secrets and fight his way to safety.",
+      "steamAppId": 250900,
+      "sourceUrl": "https://store.steampowered.com/app/250900/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/250900?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Dead Cells",
+      "englishName": "Dead Cells",
+      "genre": "平台动作",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2018-08-05",
+      "developer": "Motion Twin",
+      "publisher": "Motion Twin",
+      "price": 80,
+      "rating": 97,
+      "reviewCount": 183929,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Adventure"
+      ],
+      "description": "Dead Cells is a roguelite, metroidvania inspired, action-platformer. You'll explore a sprawling, ever-changing castle... assuming you’re able to fight your way past its keepers in 2D souls-lite combat. No checkpoints. Kill, die, learn, repeat.",
+      "steamAppId": 588650,
+      "sourceUrl": "https://store.steampowered.com/app/588650/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/588650?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Risk of Rain 2",
+      "englishName": "Risk of Rain 2",
+      "genre": "Roguelike",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2020-08-10",
+      "developer": "Hopoo Games",
+      "publisher": "Gearbox Publishing、2K",
+      "price": 80,
+      "rating": 94,
+      "reviewCount": 353382,
+      "peakPlayers": null,
+      "tags": [
+        "Action"
+      ],
+      "description": "Escape a chaotic alien planet by fighting through hordes of frenzied monsters – with your friends, or on your own. Combine loot in surprising ways and master each character until you become the havoc you feared upon your first crash landing.",
+      "steamAppId": 632360,
+      "sourceUrl": "https://store.steampowered.com/app/632360/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/632360?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Undertale",
+      "englishName": "Undertale",
+      "genre": "角色扮演",
+      "platforms": [
+        "PC"
+      ],
+      "releaseDate": "2015-09-14",
+      "developer": "tobyfox",
+      "publisher": "tobyfox",
+      "price": 36,
+      "rating": 97,
+      "reviewCount": 343680,
+      "peakPlayers": null,
+      "tags": [
+        "RPG"
+      ],
+      "description": "UNDERTALE! The RPG game where you don't have to destroy anyone.",
+      "steamAppId": 391540,
+      "sourceUrl": "https://store.steampowered.com/app/391540/",
+      "metricsSourceUrl": "https://store.steampowered.com/appreviews/391540?json=1&filter=all&language=all&purchase_type=all&num_per_page=0",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Steam 全语言全部购买类型评价；中国区人民币原价（不含限时折扣）",
+      "isDemo": false
+    },
+    {
+      "name": "Monument Valley",
+      "englishName": "Monument Valley",
+      "genre": "解谜",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2014-04-03",
+      "developer": "ustwo games",
+      "publisher": "ustwo games",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Puzzle",
+        "Entertainment",
+        "Adventure"
+      ],
+      "description": "** Apple Game of the Year 2014 **\n** Winner of Apple Design Award 2014 **\n\nIn Monument Valley you will manipulate impossible architecture and guide a silent princess through a stunningly beautiful world.\n\nMonument Valley is a surreal exploration through fantastical architecture and impossible geometry. Guide the silent princess Ida through mysterious monuments, uncovering hidden paths, unfolding optical illusions and outsmarting the enigmatic Crow People.\n\nIda's Dream now available.\n\nForgotten S",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/monument-valley/id728293409?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 728293409,
+        "usPriceUsd": 3.99,
+        "usRatingOutOf5": 4.77106,
+        "usRatingCount": 16917
+      }
+    },
+    {
+      "name": "Clash of Clans",
+      "englishName": "Clash of Clans",
+      "genre": "策略模拟",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2012-08-02",
+      "developer": "Supercell",
+      "publisher": "Supercell",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Entertainment",
+        "Strategy"
+      ],
+      "description": "Join millions of players worldwide as you build your village, raise a Clan, and compete in epic Clan Wars!\nMustachioed Barbarians, fire wielding Wizards, and other unique troops are waiting for you! Enter the world of Clash!\n\nClash of Clans is free to download and play, however, some game items can also be purchased for real money (including random items). If you don't want to purchase game items for real money, please disable in-app purchases in your device's settings.\n\n\nClassic Features:\n● Joi",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/clash-of-clans/id529479190?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 529479190,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.75636,
+        "usRatingCount": 2781287
+      }
+    },
+    {
+      "name": "Candy Crush Saga",
+      "englishName": "Candy Crush Saga",
+      "genre": "休闲消除",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2012-11-14",
+      "developer": "King",
+      "publisher": "King",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Entertainment",
+        "Puzzle",
+        "Casual"
+      ],
+      "description": "Explore a world full of delicious match-3 puzzles and endless fun! Blast through thousands of challenging levels in this timeless puzzle game from King. Match candies, conquer jelly, toffees, and jam, and uncover sweet surprises in every puzzle.\n\nClassic Match-3 Gameplay with Fresh Twists\n\n- Discover unique game modes like Gummy Dragons and Bubblegum Pop. \n- Match and blast your way through matching levels full of sugar-coated fun.\n- Master tricky puzzles and create explosive combos to clear the",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/candy-crush-saga/id553834731?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 553834731,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.70443,
+        "usRatingCount": 4016751
+      }
+    },
+    {
+      "name": "Genshin Impact",
+      "englishName": "Genshin Impact 6th Anniversary",
+      "genre": "角色扮演",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2020-09-26",
+      "developer": "COGNOSPHERE PTE. LTD.",
+      "publisher": "COGNOSPHERE PTE. LTD.",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Roleplaying",
+        "Adventure"
+      ],
+      "description": "Step into Teyvat, a vast world teeming with life and flowing with elemental energy.\n\nYou and your sibling arrived here from another world. Separated by an unknown god, stripped of your powers, and cast into a deep slumber, you now awake to a world very different from when you first arrived.\n\nThus begins your journey across Teyvat to seek answers from The Seven — the gods of each element. Along the way, prepare to explore every inch of this wondrous world, join forces with a diverse range of char",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/genshin-impact-6th-anniversary/id1517783697?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 1517783697,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.23015,
+        "usRatingCount": 579250
+      }
+    },
+    {
+      "name": "Brawl Stars",
+      "englishName": "Brawl Stars",
+      "genre": "多人竞技",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2018-12-13",
+      "developer": "Supercell",
+      "publisher": "Supercell",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Casual",
+        "Entertainment",
+        "Action"
+      ],
+      "description": "Fast paced 3v3 & 5v5 MOBA and Battle Royale made for mobile! Play online with friends or solo across a variety of PvP arena game modes in under three minutes.\n\n\nUnlock and upgrade dozens of Brawlers with powerful super abilities, star powers and gadgets! Collect unique skins to stand out and show off. Battle in a variety of mysterious arena locations within the MOBA Brawliverse!\n\nBrawl Stars is free to download and play, however, some game items can also be purchased for real money (including ra",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/brawl-stars/id1229016807?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 1229016807,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.71572,
+        "usRatingCount": 3120044
+      }
+    },
+    {
+      "name": "Pokémon GO",
+      "englishName": "Pokémon GO",
+      "genre": "位置游戏",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2016-07-07",
+      "developer": "Scopely Explore, Inc.",
+      "publisher": "Scopely Explore, Inc.",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Strategy",
+        "Roleplaying",
+        "Health & Fitness"
+      ],
+      "description": "Join Trainers across the globe who are discovering Pokémon as they explore the world around them. Pokémon GO is the global gaming sensation that has been downloaded over 1 billion times and named “Best Mobile Game” by the Game Developers Choice Awards and “Best App of the Year” by TechCrunch.\n_______________\n\nUNCOVER THE WORLD OF POKÉMON: Explore and discover Pokémon wherever you are!\n \nCATCH more Pokémon to complete your Pokédex!\n \nJOURNEY alongside your Buddy Pokémon to help make your Pokémon ",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/pok%C3%A9mon-go/id1094591345?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 1094591345,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.00397,
+        "usRatingCount": 654295
+      }
+    },
+    {
+      "name": "Subway Surfers",
+      "englishName": "Subway Surfers",
+      "genre": "跑酷",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2012-05-24",
+      "developer": "Sybo Games ApS",
+      "publisher": "Sybo Games ApS",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Casual",
+        "Entertainment"
+      ],
+      "description": "DASH as fast as you can!\nDODGE the oncoming trains!\n\nHelp Jake, Tricky & Fresh escape from the grumpy Guard and his dog.\n\n- Grind trains with your cool crew!\n- Colorful and vivid HD graphics!\n- Hoverboard Surfing!\n- Paint powered jetpack!\n- Lightning fast swipe acrobatics!\n- Challenge and help your friends!\n\nJoin the App Store's most daring chase!\n\nA Universal App with HD optimized graphics for retina resolution.\nOriginally co-developed by SYBO and Kiloo.",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/subway-surfers/id512939461?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 512939461,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.64533,
+        "usRatingCount": 3844406
+      }
+    },
+    {
+      "name": "PUBG MOBILE",
+      "englishName": "PUBG MOBILE",
+      "genre": "多人竞技",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2018-03-19",
+      "developer": "Tencent Mobile International Limited",
+      "publisher": "Tencent Mobile International Limited",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Action",
+        "Strategy"
+      ],
+      "description": "【Epic battle royale masterpiece】\nLots of events for you to explore.Climb to the top in PUBG MOBILE and fire at will. PUBG MOBILE is the original battle royale game on mobile and one of the best mobile shooting games.\n\n【Extreme battles in 10-minute matches】\nPrepare your firearms, respond to the call for battle in PUBG MOBILE, and fire at will.\n\n【Tons of maps and modes】\nPUBG MOBILE has many maps and gameplay mechanics that give you a thrilling survival experience. Find your friends and play the ne",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/pubg-mobile/id1330123889?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 1330123889,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.32028,
+        "usRatingCount": 1609335
+      }
+    },
+    {
+      "name": "MARVEL SNAP",
+      "englishName": "MARVEL SNAP - Hero Card Game",
+      "genre": "策略卡牌",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2022-10-18",
+      "developer": "Second Dinner Studios Inc.",
+      "publisher": "Second Dinner Studios Inc.",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Strategy",
+        "Card"
+      ],
+      "description": "Welcome to MARVEL SNAP, the Mobile Game of the Year Award Winner, loved by millions of players worldwide. Build your deck and harness the power of different abilities from MARVEL Super Heroes or Villains, and outsmart your opponent in 3 minutes or less with a winning strategy. This fast-paced CCG has weekly updates and cross-platform play, making the card game easy to pick up but hard to put down, whether you play on PC or mobile. \n\nThe innovative \"SNAP\" is a unique mechanic in the game that let",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/marvel-snap-hero-card-game/id1592081003?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 1592081003,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.69069,
+        "usRatingCount": 136106
+      }
+    },
+    {
+      "name": "Royal Match",
+      "englishName": "Royal Match",
+      "genre": "休闲消除",
+      "platforms": [
+        "iOS"
+      ],
+      "releaseDate": "2021-02-25",
+      "developer": "Dream Games",
+      "publisher": "Dream Games",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [
+        "Casual",
+        "Puzzle"
+      ],
+      "description": "King Robert needs your help to restore Royal Castle’s former glory. Break the obstacles and combine amazing power-ups to beat joyful and challenging levels! Keep unlocking wonderful areas by playing fun match-3 levels! Come along now and join the fun!\n\nOnce you play, you will come for Royal Match every day!\n\nRoyal Match features:\n• A new unique taste in match-3 levels with amusing obstacles and fun levels!\n• Collect loads of coins in bonus levels!\n• Lots of powerful boosters await for you to unl",
+      "steamAppId": null,
+      "sourceUrl": "https://apps.apple.com/us/app/royal-match/id1482155847?uo=4",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "Apple App Store 美国区商品；评分与 Steam 好评率口径不同，未合并",
+      "isDemo": false,
+      "sourceExtras": {
+        "appStoreId": 1482155847,
+        "usPriceUsd": 0,
+        "usRatingOutOf5": 4.69059,
+        "usRatingCount": 3841955
+      }
+    },
+    {
+      "name": "Minecraft",
+      "englishName": "Minecraft",
+      "genre": "生存建造",
+      "platforms": [
+        "Android"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://play.google.com/store/apps/details?id=com.mojang.minecraftpe&hl=en_US",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "Among Us",
+      "englishName": "Among Us",
+      "genre": "多人社交",
+      "platforms": [
+        "Android"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://play.google.com/store/apps/details?id=com.innersloth.spacemafia&hl=en_US",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "Bloodborne",
+      "englishName": "Bloodborne",
+      "genre": "动作角色扮演",
+      "platforms": [
+        "PS4"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://store.playstation.com/en-us/product/UP9000-CUSA00900_00-BLOODBORNE000000",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "God of War Ragnarök",
+      "englishName": "God of War Ragnarök",
+      "genre": "动作冒险",
+      "platforms": [
+        "PS5"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://store.playstation.com/en-us/product/UP9000-PPSA08329_00-GOWRAGNAROK00000",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "Forza Horizon 5",
+      "englishName": "Forza Horizon 5",
+      "genre": "竞速",
+      "platforms": [
+        "Xbox"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://www.xbox.com/en-US/games/forza-horizon-5",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "Halo Infinite",
+      "englishName": "Halo Infinite",
+      "genre": "射击",
+      "platforms": [
+        "Xbox"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://www.xbox.com/en-US/games/halo-infinite",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "The Legend of Zelda: Tears of the Kingdom",
+      "englishName": "The Legend of Zelda: Tears of the Kingdom",
+      "genre": "动作冒险",
+      "platforms": [
+        "Switch"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://www.nintendo.com/us/store/products/the-legend-of-zelda-tears-of-the-kingdom-switch/",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    },
+    {
+      "name": "Super Mario Bros. Wonder",
+      "englishName": "Super Mario Bros. Wonder",
+      "genre": "平台动作",
+      "platforms": [
+        "Switch"
+      ],
+      "releaseDate": "",
+      "developer": "",
+      "publisher": "",
+      "price": null,
+      "rating": null,
+      "reviewCount": null,
+      "peakPlayers": null,
+      "tags": [],
+      "description": "",
+      "steamAppId": null,
+      "sourceUrl": "https://www.nintendo.com/us/store/products/super-mario-bros-wonder-switch/",
+      "metricsSourceUrl": "",
+      "dataAsOf": "2026-10-03",
+      "metricScope": "官方商店商品页面；未采集可比价格和市场指标",
+      "isDemo": false
+    }
+  ],
+  "failures": []
+}
