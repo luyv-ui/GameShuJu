@@ -1,135 +1,126 @@
-function formatNumber(value) {
-  return Number(value || 0).toLocaleString('zh-CN');
-}
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import PDFDocument from 'pdfkit';
 
-function reportDate(value = new Date()) {
-  const date = value instanceof Date ? value : new Date(value);
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit'
-  }).format(date);
-}
+const fontFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/fonts/NotoSansSC-Regular.otf');
+const scenarioLabels = { optimistic: '乐观', base: '基准', pessimistic: '悲观' };
+const riskCategories = { license: '版号合规', ip: '版权/IP', team: '核心团队', competition: '竞品冲击', technical: '技术与服务' };
+const riskStatus = { unverified: '待核实', confirmed: '已确认', cleared: '已排除' };
+const riskSeverity = { low: '低', medium: '中', high: '高', catastrophic: '毁灭性' };
+const scenarioFields = {
+  upfrontCost: '前期投入', annualDiscountRatePct: '年折现率', month1Revenue: '首月收入',
+  monthlyRevenueDecayPct: '月收入衰减率', monthlyOperatingCost: '月运营成本'
+};
 
-function zhDate(value) {
-  const [year, month, day] = value.split('-');
-  return `${year}年${Number(month)}月${Number(day)}日`;
-}
+const present = value => value !== null && value !== undefined;
+const number = value => new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 }).format(value);
+const percent = value => present(value) ? `${number(value)}%` : '资料缺失';
+const money = (value, currency) => present(value) ? `${currency} ${number(value)}` : '资料缺失';
 
-function cleanUrl(value) {
-  try {
-    const url = new URL(value);
-    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
-  } catch { return ''; }
-}
-
-function escapeHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, character => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  })[character]);
-}
-
-export function buildDailyReport(games, date = reportDate()) {
-  const liveGames = games.filter(game => game.hasLiveData);
-  const hotGames = [...liveGames]
-    .filter(game => Number.isFinite(Number(game.currentPlayers)))
-    .sort((left, right) => Number(right.currentPlayers) - Number(left.currentPlayers))
-    .slice(0, 10);
-  const news = liveGames.flatMap(game => (game.latestSteamNews || []).map(item => ({
-    ...item, gameName: game.name, url: cleanUrl(item.url)
-  }))).filter(item => item.publishedAt)
-    .sort((left, right) => right.publishedAt.localeCompare(left.publishedAt))
-    .slice(0, 12);
-  const releases = [...games].filter(game => /^\d{4}-\d{2}-\d{2}$/.test(game.releaseDate || ''))
-    .sort((left, right) => right.releaseDate.localeCompare(left.releaseDate)).slice(0, 10);
-  const captures = liveGames.map(game => game.steamCapturedAt).filter(Boolean).sort();
-  const sources = new Map();
-  for (const game of games) {
-    const url = cleanUrl(game.sourceUrl);
-    if (url) sources.set(url, game.name);
+function scenarioLine(name, result, currency) {
+  const label = `${scenarioLabels[name]}情景`;
+  if (result.status !== 'complete') {
+    const missing = result.missingFields.map(field => scenarioFields[field] || field).join('、');
+    return `${label}：资料缺失（${missing}），无法测算。`;
   }
-  for (const item of news) if (item.url) sources.set(item.url, `${item.gameName}：${item.title}`);
+  const irr = present(result.annualIrrPct) ? percent(result.annualIrrPct) : '不可定义';
+  const payback = present(result.paybackMonth) ? `第 ${result.paybackMonth} 个月` : '24 个月内未回本';
+  return `${label}：24 个月 NPV ${money(result.npv, currency)}；年化 IRR ${irr}；回本 ${payback}；最大累计亏损 ${money(result.maximumCumulativeLoss, currency)}。`;
+}
+
+function decision(assessment) {
+  if (assessment.status === 'vetoed') return '禁止立项。已确认的毁灭性风险触发一票否决，分数归零；财务优势不得覆盖该结论。';
+  if (assessment.status === 'pending') return '资料不足，暂不评级。补齐缺失指标、来源及风险审核后重新生成报告。';
+  if (assessment.financialGate?.triggered) {
+    return `不推荐立项。${assessment.financialGate.reasons.join('；')}，根据财务硬门槛综合分封顶 49。`;
+  }
+  return `${assessment.conclusion}。综合评分 ${assessment.score} 分；该结论由当前评分参数和已录入数据自动计算。`;
+}
+
+export function generateInvestmentReport(project, generatedAt = new Date().toISOString()) {
+  const { assessment, forecast, investmentInputs: inputs } = project;
+  const strengths = [];
+  if (assessment.status !== 'vetoed' && assessment.breakdown) {
+    const { market, returns, sustainability } = assessment.breakdown;
+    if (market >= 12) strengths.push(`市场机会得分 ${number(market)} 分，已录入的赛道增速与新品存活率支持该评分。`);
+    if (returns >= 18) strengths.push(`投资收益得分 ${number(returns)} 分，依据基准情景 IRR、回本期和 LTV/CAC 测算。`);
+    if (sustainability >= 18) strengths.push(`现金流持续性得分 ${number(sustainability)} 分，依据付费 D180 留存与月现金流衰减率测算。`);
+  }
+  if (!strengths.length) strengths.push(assessment.status === 'vetoed' ? '存在一票否决风险，优势不参与立项判断。' : '当前数据尚不能形成可验证的优势判断。');
+
+  const risks = project.risks.filter(risk => risk.status !== 'cleared').map(risk =>
+    `${riskCategories[risk.category] || risk.category}（${riskStatus[risk.status] || risk.status}，${riskSeverity[risk.severity] || risk.severity}）：${risk.description}${risk.evidenceUrl ? `；证据：${risk.evidenceUrl}` : '；证据链接未提供'}`
+  );
+  if (assessment.status === 'vetoed') risks.unshift('已确认毁灭性风险触发一票否决。');
+  if (assessment.financialGate?.triggered) risks.push(`财务硬门槛：${assessment.financialGate.reasons.join('；')}。`);
+  if (assessment.status === 'pending') risks.push(`尚待补齐：${assessment.missing.join('、')}。`);
+  if (!risks.length) risks.push('当前风险清单未记录未排除风险；这不代表不存在其他风险。');
+
+  const returns = ['以下为录入假设下的 24 个月测算，不代表实际收入承诺。'];
+  for (const [name, result] of Object.entries(forecast.scenarios)) {
+    returns.push(scenarioLine(name, result, forecast.currency));
+  }
+  const ltv90 = inputs.commercial.ltv90;
+  const cac = inputs.commercial.cac;
+  returns.push(present(ltv90) && present(cac) && cac > 0
+    ? `LTV90/CAC：${number(ltv90 / cac)}（LTV90 ${money(ltv90, inputs.commercial.currency)}，CAC ${money(cac, inputs.commercial.currency)}）。`
+    : 'LTV90/CAC：资料缺失或 CAC 为 0，无法计算。');
+
+  const sustainability = [
+    `付费用户 D180 留存：${percent(inputs.users.payingD180Pct)}；月度现金流自然衰减率：${percent(inputs.users.monthlyCashDecayPct)}。`,
+    `版本更新周期：${present(inputs.operations.versionCycleMonths) ? `${number(inputs.operations.versionCycleMonths)} 个月` : '资料缺失'}；版本流水拉升：${percent(inputs.operations.versionRevenueLiftPct)}；内容消耗周期：${present(inputs.operations.contentConsumptionMonths) ? `${number(inputs.operations.contentConsumptionMonths)} 个月` : '资料缺失'}。`
+  ];
+  if (assessment.breakdown) sustainability.push(`现金流持续性得分：${number(assessment.breakdown.sustainability)} 分。`);
+  else sustainability.push('关键数据尚未齐备，暂不判断长线稳定性。');
+
+  const assumptions = [
+    `市场数据：${inputs.market.region || '地区缺失'}，${inputs.market.asOf || '日期缺失'}；依据：${inputs.market.basis || '未提供'}。`,
+    `用户数据：${inputs.users.region || '地区缺失'}，${inputs.users.asOf || '日期缺失'}；依据：${inputs.users.basis || '未提供'}。`,
+    `商业化数据：${inputs.commercial.region || '地区缺失'}，${inputs.commercial.asOf || '日期缺失'}；依据：${inputs.commercial.basis || '未提供'}。`,
+    `财务假设：前期投入 ${money(inputs.finance.upfrontCost, inputs.finance.currency)}，年折现率 ${percent(inputs.finance.annualDiscountRatePct)}；依据：${inputs.finance.basis || '未提供'}。`,
+    ...Object.entries(inputs.finance.scenarios).map(([name, scenario]) =>
+      `${scenarioLabels[name]}情景输入：首月收入 ${money(scenario.month1Revenue, inputs.finance.currency)}，月收入衰减率 ${percent(scenario.monthlyRevenueDecayPct)}，月运营成本 ${money(scenario.monthlyOperatingCost, inputs.finance.currency)}。`)
+  ];
+
   return {
-    date,
-    title: `游戏行业日报｜${zhDate(date)}`,
-    generatedAt: new Date().toISOString(),
-    totals: {
-      games: games.length,
-      liveGames: liveGames.length,
-      currentPlayers: hotGames.reduce((sum, game) => sum + Number(game.currentPlayers || 0), 0),
-      news90Days: liveGames.reduce((sum, game) => sum + Number(game.steamNewsCounts?.last90Days || 0), 0)
-    },
-    hotGames,
-    news,
-    releases,
-    sources: [...sources].map(([url, label]) => ({ url, label })),
-    latestCapture: captures.at(-1) || null,
-    limitations: [
-      '当前自动采集范围以 Steam 官方公开数据为主。',
-      '国内新闻、B站、微信小游戏和抖音小游戏尚未取得可核验数据时，不生成推测性内容。',
-      '在线人数为采集时刻快照，不代表历史峰值或销量。'
-    ]
+    projectId: project.id,
+    generatedAt,
+    projectName: project.name,
+    status: assessment.status,
+    conclusion: assessment.conclusion,
+    score: assessment.score,
+    sections: { strengths, risks, returns, sustainability, recommendation: decision(assessment) },
+    assumptions
   };
 }
 
-export function dailyReportText(games, options = {}) {
-  const report = buildDailyReport(games);
-  const lines = [
-    report.title,
-    '',
-    '今日概览',
-    `• 情报库 ${report.totals.games} 款游戏，${report.totals.liveGames} 款有实时采集`,
-    `• 已采集游戏当前在线合计 ${formatNumber(report.totals.currentPlayers)}`,
-    `• 近90天 Steam 公告 ${formatNumber(report.totals.news90Days)} 条`
-  ];
-  if (report.hotGames.length) {
-    lines.push('', '热度排行', ...report.hotGames.slice(0, 3).map((game, index) =>
-      `${index + 1}. ${game.name}：${formatNumber(game.currentPlayers)} 人在线`));
-  }
-  if (report.news.length) {
-    lines.push('', '最新动态', ...report.news.slice(0, 3).map((item, index) =>
-      `${index + 1}. ${item.gameName}｜${item.title}`));
-  }
-  const base = cleanUrl(options.webUrl);
-  if (base) lines.push('', `查看完整报告：${new URL(`/reports/${report.date}`, base).toString()}`);
-  else lines.push('', '完整报告链接尚未配置，请设置 PUBLIC_WEB_URL。');
-  lines.push('', '说明：仅根据已采集且有来源的数据生成。');
-  return lines.join('\n');
+export function renderInvestmentReportPdf(report) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50, info: { Title: `${report.projectName} - 投资立项报告`, Author: '游戏投资立项决策情报系统' } });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('error', reject);
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    try {
+      doc.registerFont('Chinese', fontFile);
+      doc.font('Chinese').fillColor('#1b2838').fontSize(20).text('投资立项决策报告');
+      doc.moveDown(0.3).fontSize(15).text(report.projectName);
+      doc.moveDown(0.4).fontSize(9).fillColor('#5f6b76').text(`生成时间：${report.generatedAt}    项目 ID：${report.projectId}`);
+      doc.moveDown(1).fillColor('#1b2838').fontSize(11).text(`结论：${report.conclusion}    综合评分：${present(report.score) ? `${report.score} 分` : '暂不评级'}`);
+      doc.moveDown(1);
+      const section = (title, lines) => {
+        doc.fontSize(13).fillColor('#1b2838').text(title, { continued: false });
+        doc.moveDown(0.3).fontSize(9.5).fillColor('#334155');
+        for (const line of lines) doc.text(`• ${line}`, { lineGap: 3 }).moveDown(0.3);
+        doc.moveDown(0.6);
+      };
+      section('项目优势', report.sections.strengths);
+      section('风险与缺口', report.sections.risks);
+      section('收益测算', report.sections.returns);
+      section('持续性判断', report.sections.sustainability);
+      section('最终立项建议', [report.sections.recommendation]);
+      section('数据依据与假设', report.assumptions);
+      doc.end();
+    } catch (error) { reject(error); }
+  });
 }
-
-export function renderDailyReportHtml(report) {
-  const itemList = (items, render, empty) => items.length
-    ? `<ol class="items">${items.map(render).join('')}</ol>`
-    : `<div class="empty">${escapeHtml(empty)}</div>`;
-  const hot = itemList(report.hotGames, game => `<li><div><strong>${escapeHtml(game.name)}</strong><span>${escapeHtml((game.platforms || []).join('、') || '平台未录入')}</span></div><b>${formatNumber(game.currentPlayers)}<small> 当前在线</small></b></li>`, '暂无在线人数实采数据');
-  const news = itemList(report.news, item => `<li><div><strong>${escapeHtml(item.gameName)}｜${escapeHtml(item.title)}</strong><span>${escapeHtml(new Date(item.publishedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }))}</span></div>${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">原始来源 ↗</a>` : '<em>来源链接缺失</em>'}</li>`, '暂无已采集的游戏公告');
-  const releases = itemList(report.releases, game => `<li><div><strong>${escapeHtml(game.name)}</strong><span>${escapeHtml(game.genre)}｜${escapeHtml((game.platforms || []).join('、') || '平台未录入')}</span></div><b>${escapeHtml(game.releaseDate)}</b></li>`, '暂无有效发行日期');
-  const sources = itemList(report.sources, source => `<li><a href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.label)} ↗</a></li>`, '暂无来源链接');
-  const focus = report.hotGames.slice(0, 5).map((game, index) => {
-    const appId = Number(game.steamAppId);
-    const cover = Number.isSafeInteger(appId) && appId > 0
-      ? `<img class="game-cover" src="https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg" alt="${escapeHtml(game.name)}封面" loading="lazy">`
-      : '';
-    const source = cleanUrl(game.sourceUrl);
-    return `<article class="focus-card">${cover}<div><span class="rank">重点观察 ${index + 1}</span><h3>${escapeHtml(game.name)}</h3><p>${escapeHtml(game.description || '当前仅展示已核验的结构化指标，尚无可引用的编辑分析。')}</p><ul><li>当前在线：<strong>${formatNumber(game.currentPlayers)}</strong></li><li>近90天公告：<strong>${formatNumber(game.steamNewsCounts?.last90Days || 0)}</strong></li><li>平台：<strong>${escapeHtml((game.platforms || []).join('、') || '未录入')}</strong></li></ul>${source ? `<a href="${escapeHtml(source)}" target="_blank" rel="noreferrer">查看原始数据 ↗</a>` : ''}</div></article>`;
-  }).join('') || '<div class="empty">暂无足够数据生成重点产品拆解。</div>';
-  const lead = report.hotGames[0];
-  return `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(report.title)}</title><style>
-:root{font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;color:#19343a;background:#f3f7f6;scroll-behavior:smooth}*{box-sizing:border-box}body{margin:0}main{width:min(920px,calc(100% - 32px));margin:36px auto 72px}.hero{padding:34px;border-radius:22px;background:linear-gradient(135deg,#0b5f5d,#169889);color:#fff;box-shadow:0 18px 45px #0d66552b}.eyebrow{font-size:12px;letter-spacing:.16em;opacity:.72}.hero h1{margin:10px 0 8px;font-size:32px}.hero p{margin:0;opacity:.82}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric,section{background:#fff;border:1px solid #dfe9e6;border-radius:16px}.metric{padding:18px}.metric b{display:block;font-size:24px;color:#0c756d}.metric span{font-size:12px;color:#71837f}section{padding:26px;margin-top:16px}h2{margin:0 0 16px;font-size:20px}h3{margin:8px 0 10px;font-size:19px}.section-note{color:#7a8c87;font-size:13px}.summary{background:#eaf6f3;border-color:#c7e5df}.summary ul{margin:0;padding-left:20px;line-height:1.9}.toc{display:flex;flex-wrap:wrap;gap:10px}.toc a{padding:8px 12px;border-radius:999px;background:#f0f6f4;color:#0a756d;text-decoration:none;font-size:13px}.items{list-style:none;margin:0;padding:0}.items li{display:flex;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px solid #edf1f0}.items li:first-child{border-top:0}.items div{display:grid;gap:5px}.items span,.items small,.items em{font-size:12px;color:#7b8b87;font-style:normal}.items b{white-space:nowrap}.items a,.focus-card a{color:#087f76;text-decoration:none}.empty{padding:22px;background:#f7faf9;border-radius:10px;color:#7b8b87}.focus-card{display:grid;grid-template-columns:240px 1fr;gap:22px;padding:22px 0;border-top:1px solid #e7eeec}.focus-card:first-of-type{border-top:0}.game-cover{width:100%;aspect-ratio:460/215;object-fit:cover;border-radius:12px;background:#eef3f2}.focus-card p{color:#5e716d;line-height:1.75}.focus-card ul{padding-left:18px;line-height:1.8}.rank{color:#b56c18;font-size:12px;font-weight:700}.notice{border-left:4px solid #d99a38}footer{margin-top:18px;text-align:center;color:#82928e;font-size:12px}@media(max-width:700px){main{margin-top:16px}.hero{padding:24px}.hero h1{font-size:25px}.metrics{grid-template-columns:repeat(2,1fr)}section{padding:18px}.items li{align-items:flex-start;flex-direction:column;gap:8px}.focus-card{grid-template-columns:1fr}.game-cover{max-width:520px}}
-</style></head><body><main>
-<header class="hero"><div class="eyebrow">GAME INTELLIGENCE DAILY</div><h1>${escapeHtml(report.title)}</h1><p>基于项目已采集数据自动生成｜不使用无来源推测</p></header>
-<div class="metrics"><div class="metric"><b>${formatNumber(report.totals.games)}</b><span>情报库游戏</span></div><div class="metric"><b>${formatNumber(report.totals.liveGames)}</b><span>实时采集游戏</span></div><div class="metric"><b>${formatNumber(report.totals.currentPlayers)}</b><span>当前在线合计</span></div><div class="metric"><b>${formatNumber(report.totals.news90Days)}</b><span>近90天公告</span></div></div>
-<section class="summary"><h2>摘要</h2><ul><li>本期覆盖 ${formatNumber(report.totals.liveGames)} 款有实时采集的游戏。</li><li>${lead ? `当前在线最高为 ${escapeHtml(lead.name)}，采集值 ${formatNumber(lead.currentPlayers)}。` : '当前暂无在线人数实采数据。'}</li><li>所有结论均可回溯到页面末尾的原始来源。</li></ul></section>
-<section><h2>目录</h2><nav class="toc"><a href="#hot">热度观察</a><a href="#overseas">海外动态</a><a href="#domestic">国内热闻</a><a href="#focus">重点产品拆解</a><a href="#release">近期发行</a><a href="#sources">数据来源</a></nav></section>
-<section id="hot"><h2>🔥 热度观察</h2>${hot}</section>
-<section id="overseas"><h2>🌍 海外动态</h2><p class="section-note">Steam 官方公开公告，按发布时间排序。</p>${news}</section>
-<section id="domestic"><h2>🇨🇳 国内热闻</h2><div class="empty">尚未采集到可核验的国内新闻数据，接入国内来源后将在此展示。</div></section>
-<section id="focus"><h2>📖 重点产品拆解</h2><p class="section-note">仅呈现已入库字段和实采指标；后续接入图片、视频和编辑批注。</p>${focus}</section>
-<section id="release"><h2>🗓️ 近期发行</h2>${releases}</section>
-<section id="sources"><h2>🔗 数据来源</h2>${sources}</section>
-<section class="notice"><h2>数据说明</h2><ul>${report.limitations.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul><p class="section-note">最近采集：${escapeHtml(report.latestCapture || '尚未采集')}｜报告生成：${escapeHtml(report.generatedAt)}</p></section>
-<footer>游戏情报分析系统 · 可追溯数据日报</footer>
-</main></body></html>`;
-}
-
-export { reportDate };
