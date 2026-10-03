@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, Menu, Plus, Search, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
-import type { Game, GameInput } from './types';
+import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, Menu, Plus, Search, ShieldAlert, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
+import type { Game, GameInput, Project } from './types';
 import './catalog.css';
 import ProjectWorkspace from './ProjectWorkspace';
+import InvestmentDashboard from './InvestmentDashboard';
+import InvestmentCompare from './InvestmentCompare';
+import RiskCenter from './RiskCenter';
 
-type View = 'projects' | 'library' | 'analytics' | 'compare';
+type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare';
 const palette = ['#e9a236', '#37a89b', '#687dd8', '#e16f72', '#889db2', '#b37ac5'];
 const emptyGame: GameInput = { channel: '端游', name: '', englishName: '', genre: '', platforms: [], releaseDate: '', developer: '', publisher: '', price: null, rating: null, reviewCount: null, peakPlayers: null, tags: [], description: '', steamAppId: null, sourceUrl: '', isDemo: false };
 
@@ -118,9 +121,12 @@ function Modal({ game, onClose, onSave, onDelete }: { game?: Game; onClose: () =
 
 export default function App() {
   const [games, setGames] = useState<Game[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectError, setProjectError] = useState('');
+  const [requestedProjectId, setRequestedProjectId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [view, setView] = useState<View>('projects');
+  const [view, setView] = useState<View>('dashboard');
   const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('全部');
   const [channel, setChannel] = useState('全部');
@@ -143,6 +149,14 @@ export default function App() {
     finally { setLoading(false); }
   }
   useEffect(() => { refresh(); }, []);
+  async function refreshProjects() {
+    try {
+      const response = await fetch('/api/projects');
+      if (!response.ok) throw new Error('无法读取立项项目');
+      setProjects(await response.json()); setProjectError('');
+    } catch (cause) { setProjectError(cause instanceof Error ? cause.message : '加载项目失败'); }
+  }
+  useEffect(() => { void refreshProjects(); }, [view]);
 
   async function saveGame(value: GameInput) {
     const response = await fetch(editing && editing !== 'new' ? `/api/games/${editing.id}` : '/api/games', { method: editing && editing !== 'new' ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -188,7 +202,8 @@ export default function App() {
   const b = games.find(game => game.id === compareB) || analysisGames.find(game => game.id !== a?.id) || games.find(game => game.id !== a?.id);
   const ratedGames = analysisGames.filter(game => isSteamRecord(game) && game.rating !== null);
   const avgRating = ratedGames.length ? Math.round(ratedGames.reduce((sum, game) => sum + (game.rating || 0), 0) / ratedGames.length) : null;
-  const nav = (next: View) => { setView(next); setMenuOpen(false); };
+  const nav = (next: View) => { setRequestedProjectId(null); setView(next); setMenuOpen(false); };
+  const openProject = (id: string) => { setRequestedProjectId(id); setView('projects'); setMenuOpen(false); };
 
   return <div className="app-shell">
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
@@ -197,20 +212,26 @@ export default function App() {
       <div className="workspace-name"><span className="workspace-avatar">点</span><span>点触科技<br /><small>游戏情报工作台</small></span></div>
       <nav className="side-nav" aria-label="主导航">
         <span className="nav-caption">投资研判</span>
+        <button className={view === 'dashboard' ? 'active' : ''} onClick={() => nav('dashboard')}><LayoutDashboard size={18} /> 投资总览</button>
         <button className={view === 'projects' ? 'active' : ''} onClick={() => nav('projects')}><ClipboardList size={18} /> 立项项目</button>
+        <button className={view === 'benchmark' ? 'active' : ''} onClick={() => nav('benchmark')}><ArrowLeftRight size={18} /> 赛道对标</button>
+        <button className={view === 'risks' ? 'active' : ''} onClick={() => nav('risks')}><ShieldAlert size={18} /> 风险监控</button>
         <span className="nav-caption nav-caption-secondary">竞品情报</span>
         <button className={view === 'library' ? 'active' : ''} onClick={() => nav('library')}><LayoutDashboard size={18} /> 情报库 <span className="nav-count">{games.length}</span></button>
         <button className={view === 'analytics' ? 'active' : ''} onClick={() => nav('analytics')}><BarChart3 size={18} /> 可视化分析</button>
-        <button className={view === 'compare' ? 'active' : ''} onClick={() => nav('compare')}><ArrowLeftRight size={18} /> 产品对比</button>
+        <button className={view === 'catalogCompare' ? 'active' : ''} onClick={() => nav('catalogCompare')}><ArrowLeftRight size={18} /> 产品对比</button>
       </nav>
       <div className="side-bottom"><div className="side-tip"><Database size={17} /><span>本地情报库<small>团队协作数据</small></span></div><div className="side-profile"><span className="profile-avatar">DC</span><span>点触科技<small>项目工作空间</small></span><CircleHelp size={16} /></div></div>
     </aside>
     {menuOpen && <button className="mobile-scrim" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
     <main className="main">
-      <header className="topbar"><div className="top-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{view === 'projects' ? '立项项目' : view === 'library' ? '游戏情报库' : view === 'analytics' ? '可视化分析' : '产品对比'}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error ? 'disconnected' : ''}`}><span /> {error ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar">DC</span></div></header>
+      <header className="topbar"><div className="top-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{({ dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比' } as Record<View, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar">DC</span></div></header>
       <div className="content">
-        {view === 'projects' && <ProjectWorkspace />}
-        {view !== 'projects' && error && <div className="error-banner" role="alert">{error}<button onClick={refresh}>重试</button></div>}
+        {view === 'dashboard' && <InvestmentDashboard projects={projects} games={games} onOpenProject={openProject} onOpenRiskCenter={() => nav('risks')} />}
+        {view === 'projects' && <ProjectWorkspace initialSelectedId={requestedProjectId} onOpenBenchmark={() => nav('benchmark')} />}
+        {view === 'benchmark' && <InvestmentCompare projects={projects} games={games} onOpenProject={openProject} />}
+        {view === 'risks' && <RiskCenter projects={projects} onOpenProject={openProject} />}
+        {view !== 'projects' && (error || projectError) && <div className="error-banner" role="alert">{error || projectError}<button onClick={() => { void refresh(); void refreshProjects(); }}>重试</button></div>}
         {view === 'library' && <>
           <div className="page-heading"><div><span className="eyebrow">GAME DATABASE / 01</span><h1>游戏情报库</h1><p>集中查看游戏资料、市场信号与产品定位</p></div><div className="heading-actions"><label className="secondary-button import-button"><Upload size={17} /> 导入 JSON<input type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importDocument(file); event.target.value = ''; }} /></label><button className="primary-button" onClick={() => setEditing('new')}><Plus size={18} /> 录入游戏</button></div></div>
           {importMessage && <div className="data-note" role="status">{importMessage}</div>}
@@ -232,7 +253,7 @@ export default function App() {
           <section className="chart-panel chart-wide"><div className="chart-heading"><div><h2>发行年份趋势</h2><p>按发行年份统计收录产品</p></div><span>时间视角</span></div><div className="chart-box year-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={yearData} margin={{ top: 14, right: 22, bottom: 0, left: -20 }}><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38a99c" stopOpacity={0.24} /><stop offset="100%" stopColor="#38a99c" stopOpacity={0.01} /></linearGradient></defs><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fill: '#68737d', fontSize: 12 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 12 }} /><Tooltip /><Area dataKey="count" name="游戏数" stroke="#279c90" strokeWidth={2.5} fill="url(#areaFill)" /></AreaChart></ResponsiveContainer></div></section></div>
           <div className="data-note">图表只统计非演示记录。类型和平台数量反映当前选取的样本，不能视为全球市场规模或收入份额；平均好评率只计算有 Steam 评价的记录。</div>
         </>}
-        {view === 'compare' && <>
+        {view === 'catalogCompare' && <>
           <div className="page-heading"><div><span className="eyebrow">PRODUCT COMPARISON / 03</span><h1>产品对比</h1><p>并排查看两款游戏的定位与核心指标</p></div></div>
           <div className="compare-pickers"><div><label htmlFor="compare-a">产品 A</label><select id="compare-a" value={a?.id || ''} onChange={e => setCompareA(e.target.value)}>{games.filter(game => game.id !== b?.id).map(game => <option key={game.id} value={game.id}>{game.name}</option>)}</select></div><div className="swap-mark"><ArrowLeftRight size={20} /></div><div><label htmlFor="compare-b">产品 B</label><select id="compare-b" value={b?.id || ''} onChange={e => setCompareB(e.target.value)}>{games.filter(game => game.id !== a?.id).map(game => <option key={game.id} value={game.id}>{game.name}</option>)}</select></div></div>
           {a && b ? <><div className="compare-heroes"><div className="compare-product"><Cover game={a} className="compare-cover" /><div><span className="compare-label">产品 A</span><h2>{a.name}</h2><p>{a.englishName || a.developer}</p><div className="compare-tags">{a.tags.slice(0, 3).map(tag => <span key={tag}>{tag}</span>)}</div></div></div><div className="compare-product"><Cover game={b} className="compare-cover" /><div><span className="compare-label">产品 B</span><h2>{b.name}</h2><p>{b.englishName || b.developer}</p><div className="compare-tags">{b.tags.slice(0, 3).map(tag => <span key={tag}>{tag}</span>)}</div></div></div></div>

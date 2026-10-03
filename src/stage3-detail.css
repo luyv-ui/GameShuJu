@@ -1,0 +1,39 @@
+.stage3-project-detail{width:min(960px,100%)}
+.project-detail-tabs{display:flex;gap:5px;padding:0 28px;border-bottom:1px solid #e8edef;overflow-x:auto;flex:none}
+.project-detail-tabs button{flex:none;padding:13px 14px;border:0;border-bottom:2px solid transparent;background:transparent;color:#71838b;font-size:12px}
+.project-detail-tabs button.selected{border-color:#209e91;color:#168f84;font-weight:700}
+.stage3-project-detail .project-detail-body{min-height:280px}
+.project-report{border-top:1px solid #e9eef0;margin-top:22px;padding-top:18px}
+.project-benchmark-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid #e9eef0;padding-top:18px;margin-top:18px}
+.project-benchmark-summary h3{font-size:13px;color:#344850;margin:0 0 6px}
+.project-benchmark-summary p{font-size:11px;color:#7d8f96;line-height:1.6;margin:0}
+.project-benchmark-summary button{flex:none}
+.project-report-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.project-report-heading h3{font-size:14px;color:#344850;margin:0}
+.project-report-heading span{display:block;margin-top:5px;font-size:11px;color:#88999f}
+.project-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+.project-report-section{padding:14px;border:1px solid #e5ecee;border-radius:5px;background:#fff;min-width:0}
+.project-report>.project-report-section{margin-top:14px;border-color:#cce6dd;background:#f7fbf9}
+.project-report-section h4{font-size:12px;color:#354b53;margin:0 0 9px}
+.project-report-section ul{margin:0;padding-left:18px;color:#596f77;font-size:11px;line-height:1.75}
+.project-report-section li+li{margin-top:5px}
+.project-report-section p,.project-report-error,.project-report-loading{margin:0;color:#8a9aa1;font-size:11px;line-height:1.7}
+.project-report-error,.project-report-loading{padding:14px 0}
+.project-missing{border:1px solid #e9ded0;background:#fffaf4;border-radius:5px;margin-top:14px;padding:12px 14px;color:#805b31;font-size:11px}
+.project-missing p{margin:5px 0 0;line-height:1.6}
+.project-combined{border-bottom:1px solid #e9eef0;padding-bottom:18px}
+.project-combined h3{margin:0;font-size:13px;color:#344850}
+.project-combined-chart{height:260px;margin-top:14px}
+.project-combined-empty{color:#8a999f;font-size:11px}
+.project-finance-basis{display:flex;align-items:flex-start;gap:7px;margin-top:16px;color:#73878f;font-size:11px;line-height:1.6}
+.project-operations{display:grid;gap:20px}
+.project-operations section{border-bottom:1px solid #e9eef0;padding-bottom:17px}
+.project-operations section:last-child{border-bottom:0}
+.project-operations h3{font-size:13px;color:#344850;margin:0 0 12px}
+.project-operations-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.project-operations-grid>div{min-width:0;padding:10px 12px;background:#f6f9f9;border-radius:4px}
+.project-operations-grid span{display:block;color:#8b9ba2;font-size:10px}
+.project-operations-grid strong{display:block;margin-top:5px;color:#38505a;font-size:13px;overflow-wrap:anywhere}
+.project-operations section p{font-size:10px;color:#81939a;line-height:1.6;margin:10px 0 0;overflow-wrap:anywhere}
+.project-risk-tab{border-top:0;padding-top:0;margin-top:0}
+@media(max-width:600px){.project-detail-tabs{padding:0 14px}.project-detail-tabs button{padding:11px 9px;font-size:11px}.project-report-grid{grid-template-columns:1fr}.project-report-heading{align-items:flex-start}.project-benchmark-summary{align-items:flex-start;flex-direction:column}.project-operations-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.project-combined-chart{height:220px}}

@@ -7,6 +7,7 @@ import { searchGames } from './query.js';
 import { startDingTalkBot } from './dingtalk.js';
 import { listProjects, createProject, updateProject, deleteProject } from './projects.js';
 import { getScoreConfig, putScoreConfig } from './score-config.js';
+import { generateInvestmentReport, renderInvestmentReportPdf } from './report.js';
 
 const app = express();
 app.use(express.json({ limit: '8mb' }));
@@ -57,6 +58,24 @@ app.delete('/api/projects/:id', (req, res) => {
     if (!deleteProject(req.params.id)) return res.status(404).json({ error: '项目不存在' });
     res.status(204).end();
   } catch (error) { res.status(500).json({ error: '项目删除失败' }); }
+});
+
+app.get('/api/projects/:id/report', (req, res) => {
+  try {
+    const project = listProjects().find(item => item.id === req.params.id);
+    if (!project) return res.status(404).json({ error: '项目不存在' });
+    res.json(generateInvestmentReport(project));
+  } catch { res.status(500).json({ error: '报告生成失败' }); }
+});
+app.get('/api/projects/:id/report.pdf', async (req, res) => {
+  try {
+    const project = listProjects().find(item => item.id === req.params.id);
+    if (!project) return res.status(404).json({ error: '项目不存在' });
+    const pdf = await renderInvestmentReportPdf(generateInvestmentReport(project));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="investment-report.pdf"');
+    res.send(pdf);
+  } catch { res.status(500).json({ error: 'PDF 导出失败' }); }
 });
 
 app.get('/api/score-config', (req, res) => {

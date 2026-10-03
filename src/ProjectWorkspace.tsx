@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Check, ChevronRight, ClipboardList, ExternalLink, Plus, Search, Settings2, ShieldAlert, Trash2, X } from 'lucide-react';
+import { Check, ChevronRight, ClipboardList, Plus, Search, Settings2, ShieldAlert, Trash2, X } from 'lucide-react';
 import type { Project, ProjectInput, ProjectRisk } from './types';
 import InvestmentInputsEditor, { emptyInvestmentInputs } from './InvestmentInputsEditor';
-import ProjectForecast from './ProjectForecast';
+import ProjectDetail from './ProjectDetail';
 import ScoreConfigEditor from './ScoreConfigEditor';
 
 const stages: Record<Project['stage'], string> = { concept: '概念阶段', prototype: '原型验证', production: '研发中', live: '已上线' };
@@ -12,7 +12,6 @@ const severities: Record<ProjectRisk['severity'], string> = { low: '低', medium
 const emptyProject: ProjectInput = { name: '', genre: '', studio: '', stage: 'concept', description: '', risks: [], investmentInputs: emptyInvestmentInputs(), riskReviewComplete: false };
 
 function isVetoRisk(risk: ProjectRisk) { return risk.status === 'confirmed' && risk.severity === 'catastrophic'; }
-function sortRisks(risks: ProjectRisk[]) { return [...risks].sort((a, b) => Number(isVetoRisk(b)) - Number(isVetoRisk(a))); }
 function dateText(date: string) { return date ? new Date(date).toLocaleDateString('zh-CN') : '未记录'; }
 
 async function projectRequest(path: string, method?: string, body?: ProjectInput) {
@@ -77,12 +76,12 @@ function ProjectEditor({ project, onClose, onSaved }: { project?: Project; onClo
   </div>;
 }
 
-export default function ProjectWorkspace() {
+export default function ProjectWorkspace({ initialSelectedId = null, onOpenBenchmark }: { initialSelectedId?: string | null; onOpenBenchmark?: () => void }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   const [editing, setEditing] = useState<Project | 'new' | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -117,11 +116,7 @@ export default function ProjectWorkspace() {
       {!loading && projects.length > 0 && filtered.length === 0 && <div className="project-empty">没有匹配的项目</div>}
       {filtered.map(project => <button className={`project-list-row ${project.assessment.status === 'vetoed' ? 'vetoed' : ''}`} key={project.id} onClick={() => setSelectedId(project.id)}><div className="project-row-main"><strong>{project.name}</strong><span>{project.genre} · {project.studio || '未录入团队'}</span></div><span className="project-stage">{stages[project.stage]}</span><span className={`project-result ${project.assessment.status}`}>{project.assessment.status === 'vetoed' && <ShieldAlert size={15} />}{project.assessment.conclusion}</span><span className="project-row-date">{dateText(project.updatedAt)}</span><ChevronRight size={17} /></button>)}
     </div>
-    {selected && <div className="modal-backdrop" onMouseDown={() => setSelectedId(null)}><div className="modal project-detail-modal" role="dialog" aria-modal="true" aria-label={`${selected.name}项目详情`} onMouseDown={event => event.stopPropagation()}>
-      <div className="modal-header"><div><span className="eyebrow">立项项目 / {stages[selected.stage]}</span><h2>{selected.name}</h2></div><button className="icon-button" onClick={() => setSelectedId(null)} aria-label="关闭"><X size={19} /></button></div>
-      <div className="project-detail-body"><div className={`project-conclusion ${selected.assessment.status}`}><div className="project-conclusion-icon">{selected.assessment.status === 'vetoed' ? <ShieldAlert size={23} /> : <AlertTriangle size={23} />}</div><div><span>当前立项结论</span><strong>{selected.assessment.conclusion}{selected.assessment.score !== null ? ` · ${selected.assessment.score} 分` : ''}</strong><p>{selected.assessment.status === 'vetoed' ? '已确认的毁灭性风险触发一票否决。' : selected.assessment.status === 'rated' ? '依据已录入数据与评分参数计算。' : '当前项目资料不足，暂不提供量化评分。'}</p></div></div>{selected.assessment.financialGate?.triggered && <div className="project-financial-gate" role="alert"><AlertTriangle size={17} /><div><strong>基准情景触发财务门槛，最终评分封顶 49 分</strong><p>{selected.assessment.financialGate.reasons.join('；')}。门槛前评分：{selected.assessment.financialGate.uncappedScore} 分。</p></div></div>}{selected.assessment.status === 'rated' && selected.assessment.breakdown && <div className="project-score-breakdown">{Object.entries(selected.assessment.breakdown as Record<string, number>).map(([key, value]) => <div key={key}><span>{({ market: '市场', returns: '收益', sustainability: '持续性', riskReserve: '风险保留', riskPenalty: '风险扣分' } as Record<string, string>)[key] || key}</span><strong>{key === 'riskPenalty' ? '−' : ''}{value}</strong></div>)}</div>}<div className="project-detail-meta"><div><span>游戏类型</span><strong>{selected.genre}</strong></div><div><span>研发团队</span><strong>{selected.studio || '未录入'}</strong></div><div><span>当前阶段</span><strong>{stages[selected.stage]}</strong></div><div><span>更新时间</span><strong>{dateText(selected.updatedAt)}</strong></div></div>{selected.description && <div className="project-detail-section"><h3>项目概述</h3><p>{selected.description}</p></div>}<ProjectForecast forecast={selected.forecast} /><div className="project-detail-section"><h3>风险清单 <span>{selected.risks.length}</span></h3><p className="project-review-status">审核状态：{selected.riskReviewComplete ? '已完成' : '未完成'}</p>{selected.risks.length === 0 ? <p>尚未录入风险事实</p> : <div className="project-detail-risks">{sortRisks(selected.risks).map(risk => <div key={risk.id} className={`project-detail-risk ${isVetoRisk(risk) ? 'vetoed' : ''}`}><div><strong>{isVetoRisk(risk) && <ShieldAlert size={16} />}{categories[risk.category]}</strong><span>{statuses[risk.status]} · {severities[risk.severity]}</span></div><p>{risk.description}</p>{risk.evidenceUrl && <a href={risk.evidenceUrl} target="_blank" rel="noreferrer">查看证据 <ExternalLink size={13} /></a>}</div>)}</div>}</div></div>
-      <div className="project-detail-actions"><button className="text-danger" disabled={busy} onClick={() => void removeProject(selected)}><Trash2 size={15} /> 删除项目</button><span className="spacer" /><button className="primary-button" onClick={() => { setEditing(selected); setSelectedId(null); }}>编辑项目</button></div>
-    </div></div>}
+    {selected && <ProjectDetail key={selected.id} project={selected} busy={busy} onClose={() => setSelectedId(null)} onDelete={() => void removeProject(selected)} onEdit={() => { setEditing(selected); setSelectedId(null); }} onOpenBenchmark={onOpenBenchmark} />}
     {editing && <ProjectEditor key={editing === 'new' ? 'new' : editing.id} project={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
     {showConfig && <ScoreConfigEditor onClose={() => setShowConfig(false)} onSaved={refresh} />}
   </>;
