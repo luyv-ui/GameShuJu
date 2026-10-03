@@ -1,8 +1,10 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import fs from 'node:fs';
 
 const SESSION_MS = 8 * 60 * 60 * 1000;
 const ASSERTION_MS = 5 * 60 * 1000;
 const ROLES = new Set(['investor', 'analyst', 'admin']);
+const LOGIN_ATTEMPT_MS = 15 * 60 * 1000;
 
 const token = () => randomBytes(32).toString('base64url');
 function same(left, right) {
@@ -30,8 +32,23 @@ function assertionText(body) {
 export function createAuth(env = process.env) {
   const host = env.HOST || '127.0.0.1';
   const mode = env.AUTH_MODE || 'local';
-  if (!['local', 'external'].includes(mode)) throw new Error('AUTH_MODE must be local or external');
+  if (!['local', 'external', 'accounts'].includes(mode)) throw new Error('AUTH_MODE must be local, external or accounts');
   if (mode === 'local' && !isLoopback(host)) throw new Error('Local authentication requires loopback HOST');
+  let accounts = new Map();
+  if (mode === 'accounts') {
+    if (env.AUTH_COOKIE_SECURE !== 'true' || !env.AUTH_USERS_FILE) {
+      throw new Error('Account authentication requires AUTH_COOKIE_SECURE=true and AUTH_USERS_FILE');
+    }
+    const records = JSON.parse(fs.readFileSync(env.AUTH_USERS_FILE, 'utf8'));
+    if (!Array.isArray(records) || records.length === 0) throw new Error('AUTH_USERS_FILE must contain accounts');
+    for (const account of records) {
+      if (typeof account.id !== 'string' || !/^[A-Za-z0-9_-]{3,64}$/.test(account.id) ||
+          typeof account.name !== 'string' || !account.name.trim() || account.name.length > 128 ||
+          !ROLES.has(account.role) || !/^[a-f0-9]{32}$/.test(account.salt) || !/^[a-f0-9]{128}$/.test(account.hash) ||
+          accounts.has(account.id)) throw new Error('AUTH_USERS_FILE contains an invalid or duplicate account');
+      accounts.set(account.id, account);
+    }
+  }
   if (mode === 'external') {
     if (!env.AUTH_SHARED_SECRET || env.AUTH_SHARED_SECRET.length < 32 || !env.AUTH_CORP_ID || !env.EXTERNAL_LOGIN_URL) {
       throw new Error('External authentication requires AUTH_SHARED_SECRET (32+ characters), AUTH_CORP_ID, and EXTERNAL_LOGIN_URL');
@@ -42,10 +59,11 @@ export function createAuth(env = process.env) {
     }
     if (!isLoopback(host) && env.AUTH_COOKIE_SECURE !== 'true') throw new Error('External authentication requires AUTH_COOKIE_SECURE=true on non-loopback HOST');
   }
-  const secure = mode === 'external' && env.AUTH_COOKIE_SECURE === 'true';
+  const secure = mode !== 'local' && env.AUTH_COOKIE_SECURE === 'true';
   const sessions = new Map();
   const nonces = new Map();
   const states = new Map();
+  const loginFailures = new Map();
 
   function makeSession(res, user) {
     const id = token();
@@ -86,6 +104,7 @@ export function createAuth(env = process.env) {
     });
     app.get('/api/auth/login', (req, res) => {
       if (mode === 'local') { session(req, res); return res.redirect('/'); }
+      if (mode === 'accounts') return res.redirect('/');
       const state = token();
       for (const [key, expires] of states) if (expires < Date.now()) states.delete(key);
       states.set(state, Date.now() + ASSERTION_MS);
@@ -93,6 +112,31 @@ export function createAuth(env = process.env) {
       const url = new URL(env.EXTERNAL_LOGIN_URL);
       url.searchParams.set('state', state);
       res.redirect(url.toString());
+    });
+    app.post('/api/auth/password', (req, res) => {
+      if (mode !== 'accounts') return res.status(404).json({ error: '接口不存在' });
+      if (!req.is('application/json')) return res.status(415).json({ error: '需要 JSON 请求' });
+      const id = req.body?.id;
+      const password = req.body?.password;
+      if (typeof id !== 'string' || typeof password !== 'string' || id.length > 64 || password.length > 256) {
+        return res.status(400).json({ error: '账号或密码格式错误' });
+      }
+      const clientIp = env.AUTH_TRUST_PROXY === 'true'
+        ? String(req.headers['x-forwarded-for'] || '').split(',').at(-1)?.trim() || req.socket.remoteAddress
+        : req.socket.remoteAddress;
+      const key = `${clientIp}:${id}`;
+      const account = accounts.get(id);
+      const failed = account && loginFailures.get(key);
+      if (failed?.until > Date.now() && failed.count >= 5) return res.status(429).json({ error: '尝试过多，请稍后重试' });
+      const candidate = account ? scryptSync(password, Buffer.from(account.salt, 'hex'), 64) : null;
+      if (!account || !timingSafeEqual(candidate, Buffer.from(account.hash, 'hex'))) {
+        const count = failed?.until > Date.now() ? failed.count + 1 : 1;
+        if (account) loginFailures.set(key, { count, until: Date.now() + LOGIN_ATTEMPT_MS });
+        return res.status(401).json({ error: '账号或密码错误' });
+      }
+      loginFailures.delete(key);
+      const current = makeSession(res, { id: account.id, name: account.name, role: account.role });
+      res.json({ authenticated: true, mode, user: current.user, csrfToken: current.csrfToken });
     });
     app.post('/api/auth/exchange', (req, res) => {
       if (mode !== 'external') return res.status(404).json({ error: '接口不存在' });

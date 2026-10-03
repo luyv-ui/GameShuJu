@@ -134,3 +134,14 @@ test('keeps Apple US metrics separate from Steam measures', () => {
   document.games[0].rating = 90;
   assert.throws(() => prepareVerifiedSnapshot(document), /非 Steam 公共指标/);
 });
+
+test('accepts a TapTap product page only with the Android catalog scope', () => {
+  const document = snapshot();
+  document.games = [{ name: 'TapTap Example', genre: '音游', channel: 'App', platforms: ['Android'],
+    sourceUrl: 'https://www.taptap.cn/app/165287', metricsSourceUrl: '',
+    dataAsOf: '2026-10-03', metricScope: 'TapTap 公开榜单及商品页；评分未采集',
+    steamAppId: null, price: null, rating: null, reviewCount: null, peakPlayers: null }];
+  assert.equal(prepareVerifiedSnapshot(document).games[0].name, 'TapTap Example');
+  document.games[0].platforms = ['PC'];
+  assert.throws(() => prepareVerifiedSnapshot(document), /TapTap 商品链接或平台口径/);
+});

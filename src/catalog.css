@@ -88,3 +88,14 @@
 .catalog-sync strong { color: #26343b; font-size: 13px; }
 .catalog-sync a, .catalog-source-link { display: inline-flex; align-items: center; gap: 4px; color: #167f76; text-decoration: none; }
 .catalog-sync a:hover, .catalog-source-link:hover { text-decoration: underline; }
+.analysis-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 24px; margin: 8px 0 20px; }
+.analysis-controls .channel-tabs { margin: 0; }
+.analysis-controls label { display: flex; align-items: center; gap: 8px; color: #60717a; font-size: 12px; }
+.analysis-controls select { min-width: 190px; padding: 8px 10px; border: 1px solid #dce5e7; border-radius: 4px; color: #283b42; background: #fff; font: inherit; }
+.analysis-source-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0 18px; margin: 0 0 10px; border-top: 1px solid #e2e8e9; }
+.analysis-source-list > div { display: flex; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid #e2e8e9; color: #52636c; font-size: 12px; }
+.analysis-source-list strong { color: #203840; font-size: 14px; }
+.analysis-domestic { margin: 8px 0 22px; color: #62747a; font-size: 12px; line-height: 1.6; }
+.analysis-metric-panel { margin-top: 18px; }
+.analysis-steam-heading { margin-top: 28px; }
+@media(max-width:560px) { .analysis-controls { align-items: stretch; } .analysis-controls label { width: 100%; justify-content: space-between; } .analysis-controls select { flex: 1; min-width: 0; } }

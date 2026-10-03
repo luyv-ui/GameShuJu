@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import express from 'express';
 import { createAuth } from './auth.js';
+import { createTestAccounts } from '../scripts/create-test-accounts.mjs';
 
 const secret = 'test-secret-0123456789-abcdefghijklmnopqrstuvwxyz';
 const config = {
@@ -114,4 +118,34 @@ test('investor, analyst and admin permissions cover reports and every write cate
     assert.equal((await call('/api/auth/logout', 'POST')).status, 204);
     assert.equal((await call('/api/projects', 'GET')).status, 401);
   }
+});
+
+test('isolated test accounts authenticate with distinct roles and secure sessions', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'game-auth-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const usersFile = path.join(dir, 'users.json');
+  const credentialsFile = path.join(dir, 'credentials.txt');
+  createTestAccounts(usersFile, credentialsFile);
+  assert.equal(fs.statSync(usersFile).mode & 0o777, 0o600);
+  assert.equal(fs.statSync(credentialsFile).mode & 0o777, 0o600);
+  assert.throws(() => createTestAccounts(usersFile, credentialsFile), /已存在/);
+  assert.throws(() => createAuth({ AUTH_MODE: 'accounts', AUTH_USERS_FILE: usersFile }), /AUTH_COOKIE_SECURE/);
+  const server = await serve(createAuth({ AUTH_MODE: 'accounts', HOST: '127.0.0.1', AUTH_COOKIE_SECURE: 'true', AUTH_USERS_FILE: usersFile }));
+  t.after(server.close);
+  const credentials = fs.readFileSync(credentialsFile, 'utf8');
+  for (const [id, role] of [['investor-demo', 'investor'], ['analyst-demo', 'analyst'], ['admin-demo', 'admin']]) {
+    const password = credentials.match(new RegExp(`账号：${id}\\n初始密码：([^\\n]+)`))[1];
+    const response = await fetch(`${server.url}/api/auth/password`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, password }) });
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('set-cookie'), /; Secure/);
+    const body = await response.json();
+    assert.equal(body.user.role, role);
+    const cookie = response.headers.get('set-cookie').split(';')[0];
+    assert.equal((await fetch(`${server.url}/api/projects`, { headers: { Cookie: cookie } })).status, 200);
+    assert.equal((await fetch(`${server.url}/api/projects`, { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': body.csrfToken } })).status,
+      role === 'investor' ? 403 : 201);
+  }
+  assert.equal((await fetch(`${server.url}/api/auth/password`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: 'admin-demo', password: 'wrong' }) })).status, 401);
 });

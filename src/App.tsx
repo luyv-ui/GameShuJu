@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, LogOut, Menu, Newspaper, Plus, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trash2, Upload, X } from 'lucide-react';
+import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, LogOut, Menu, Newspaper, Plus, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trophy, TrendingUp, Trash2, Upload, X } from 'lucide-react';
 import type { Game, GameInput, Project } from './types';
 import './catalog.css';
 import ProjectWorkspace from './ProjectWorkspace';
 import InvestmentDashboard from './InvestmentDashboard';
 import InvestmentCompare from './InvestmentCompare';
 import RiskCenter from './RiskCenter';
+import RankingWorkspace from './RankingWorkspace';
 import { apiFetch, useAuth } from './auth';
 
-type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare';
+type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare' | 'rankings' | 'profitBreakdown';
 type CatalogSyncStatus = { running?: boolean; finishedAt?: string; sources?: Record<string, { url: string; state: string; lastSuccessAt?: string; fetched?: number; added?: number; updated?: number; error?: string; warnings?: string[] }> };
 const palette = ['#e9a236', '#37a89b', '#687dd8', '#e16f72', '#889db2', '#b37ac5'];
 const emptyGame: GameInput = { channel: '端游', name: '', englishName: '', genre: '', platforms: [], releaseDate: '', developer: '', publisher: '', price: null, rating: null, reviewCount: null, peakPlayers: null, tags: [], description: '', steamAppId: null, sourceUrl: '', isDemo: false };
@@ -34,6 +35,7 @@ function sourceName(game: Game) {
   if (isAppStoreUrl(game.sourceUrl)) return 'Apple App Store 美国区';
   if (sourceHost(game.sourceUrl) === 'store.steampowered.com') return 'Steam';
   if (sourceHost(game.sourceUrl) === 'sj.qq.com') return '腾讯应用宝';
+  if (sourceHost(game.sourceUrl) === 'www.taptap.cn') return 'TapTap';
   if (sourceHost(game.sourceUrl) === 'play.google.com') return 'Google Play';
   if (sourceHost(game.sourceUrl) === 'store.playstation.com') return 'PlayStation Store';
   if (sourceHost(game.sourceUrl) === 'www.xbox.com') return 'Xbox';
@@ -149,6 +151,8 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [importMessage, setImportMessage] = useState('');
+  const [analysisChannel, setAnalysisChannel] = useState('全部');
+  const [analysisSource, setAnalysisSource] = useState('全部');
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null);
   const [syncMessage, setSyncMessage] = useState('');
 
@@ -231,16 +235,25 @@ export default function App() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   const visibleGames = filtered.slice((page - 1) * pageSize, page * pageSize);
   const channelCounts = useMemo(() => games.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [games]);
-  const analysisGames = useMemo(() => games.filter(game => !game.isDemo), [games]);
-  const analysisChannelCounts = useMemo(() => analysisGames.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [analysisGames]);
+  const allAnalysisGames = useMemo(() => games.filter(game => !game.isDemo), [games]);
+  const analysisChannelCounts = useMemo(() => allAnalysisGames.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [allAnalysisGames]);
+  const channelAnalysisGames = useMemo(() => allAnalysisGames.filter(game => analysisChannel === '全部' || game.channel === analysisChannel), [allAnalysisGames, analysisChannel]);
+  const sourceCounts = useMemo(() => channelAnalysisGames.reduce<Record<string, number>>((counts, game) => { const name = sourceName(game); counts[name] = (counts[name] || 0) + 1; return counts; }, {}), [channelAnalysisGames]);
+  const analysisGames = useMemo(() => channelAnalysisGames.filter(game => analysisSource === '全部' || sourceName(game) === analysisSource), [channelAnalysisGames, analysisSource]);
   const categoryData = useMemo(() => Object.entries(analysisGames.reduce<Record<string, number>>((acc, game) => { acc[game.genre] = (acc[game.genre] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value })), [analysisGames]);
   const categoryChartData = categoryData.length > 12 ? [...categoryData.slice(0, 11), { name: '其他类型', value: categoryData.slice(11).reduce((sum, item) => sum + item.value, 0) }] : categoryData;
   const platformData = useMemo(() => Object.entries(analysisGames.reduce<Record<string, number>>((acc, game) => { game.platforms.forEach(item => { acc[item] = (acc[item] || 0) + 1; }); return acc; }, {})).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value })), [analysisGames]);
   const yearData = useMemo(() => Object.entries(analysisGames.reduce<Record<string, number>>((acc, game) => { const year = game.releaseDate.slice(0, 4); if (year) acc[year] = (acc[year] || 0) + 1; return acc; }, {})).sort((a, b) => a[0].localeCompare(b[0])).map(([year, count]) => ({ year, count })), [analysisGames]);
-  const a = games.find(game => game.id === compareA) || analysisGames[0] || games[0];
-  const b = games.find(game => game.id === compareB) || analysisGames.find(game => game.id !== a?.id) || games.find(game => game.id !== a?.id);
-  const ratedGames = analysisGames.filter(game => isSteamRecord(game) && game.rating !== null);
+  const a = games.find(game => game.id === compareA) || allAnalysisGames[0] || games[0];
+  const b = games.find(game => game.id === compareB) || allAnalysisGames.find(game => game.id !== a?.id) || games.find(game => game.id !== a?.id);
+  const ratedGames = allAnalysisGames.filter(game => isSteamRecord(game) && game.rating !== null);
   const avgRating = ratedGames.length ? Math.round(ratedGames.reduce((sum, game) => sum + (game.rating || 0), 0) / ratedGames.length) : null;
+  const selectedSteamRated = analysisGames.filter(game => isSteamRecord(game) && game.rating !== null);
+  const selectedSteamAverage = selectedSteamRated.length ? Math.round(selectedSteamRated.reduce((sum, game) => sum + game.rating!, 0) / selectedSteamRated.length) : null;
+  const appleRated = analysisGames.filter(game => isAppStoreUrl(game.sourceUrl) && (game.sourceExtras?.usRatingOutOf5 ?? 0) > 0 && (game.sourceExtras?.usRatingCount ?? 0) > 0);
+  const appleAverage = appleRated.length ? (appleRated.reduce((sum, game) => sum + game.sourceExtras!.usRatingOutOf5!, 0) / appleRated.length).toFixed(1) : null;
+  const appleRatingData = [1, 2, 3, 4, 5].map(stars => ({ name: `${stars} 星`, value: appleRated.filter(game => Math.ceil(game.sourceExtras!.usRatingOutOf5!) === stars).length }));
+  const showSteamSignals = (analysisChannel === '全部' || analysisChannel === '端游') && (analysisSource === '全部' || analysisSource === 'Steam');
   const liveGames = games.filter(game => game.hasLiveData);
   const totalCurrentPlayers = liveGames.reduce((sum, game) => sum + Number(game.currentPlayers || 0), 0);
   const totalNews90Days = liveGames.reduce((sum, game) => sum + Number(game.steamNewsCounts?.last90Days || 0), 0);
@@ -269,17 +282,21 @@ export default function App() {
         <button className={view === 'library' ? 'active' : ''} onClick={() => nav('library')}><LayoutDashboard size={18} /> 情报库 <span className="nav-count">{games.length}</span></button>
         <button className={view === 'analytics' ? 'active' : ''} onClick={() => nav('analytics')}><BarChart3 size={18} /> 可视化分析</button>
         <button className={view === 'catalogCompare' ? 'active' : ''} onClick={() => nav('catalogCompare')}><ArrowLeftRight size={18} /> 产品对比</button>
+        <button className={view === 'rankings' ? 'active' : ''} onClick={() => nav('rankings')}><Trophy size={18} /> 游戏榜单</button>
+        <button className={view === 'profitBreakdown' ? 'active' : ''} onClick={() => nav('profitBreakdown')}><TrendingUp size={18} /> 畅销盈利拆解</button>
       </nav>
       <div className="side-bottom"><div className="side-tip"><Database size={17} /><span>本地情报库<small>团队协作数据</small></span></div><div className="side-profile"><span className="profile-avatar">{user?.name.slice(0, 1) || 'DC'}</span><span>{user?.name || '点触科技'}<small>{user?.role === 'admin' ? '管理员' : user?.role === 'analyst' ? '分析师' : '投资人'}</small></span>{mode === 'external' ? <button className="icon-button" title="退出登录" aria-label="退出登录" onClick={() => void logout()}><LogOut size={16} /></button> : <CircleHelp size={16} />}</div></div>
     </aside>
     {menuOpen && <button className="mobile-scrim" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
     <main className="main">
-      <header className="topbar"><div className="top-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{({ dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比' } as Record<View, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar" title={user?.name}>{user?.name.slice(0, 1) || 'DC'}</span></div></header>
+      <header className="topbar"><div className="top-left"><button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="打开菜单"><Menu size={20} /></button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{({ dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比', rankings: '游戏榜单', profitBreakdown: '畅销盈利拆解' } as Record<View, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar" title={user?.name}>{user?.name.slice(0, 1) || 'DC'}</span></div></header>
       <div className="content">
         {view === 'dashboard' && <InvestmentDashboard projects={projects} games={games} onOpenProject={openProject} onOpenRiskCenter={() => nav('risks')} />}
         {view === 'projects' && <ProjectWorkspace initialSelectedId={requestedProjectId} onOpenBenchmark={() => nav('benchmark')} />}
         {view === 'benchmark' && <InvestmentCompare projects={projects} games={games} onOpenProject={openProject} />}
         {view === 'risks' && <RiskCenter projects={projects} onOpenProject={openProject} />}
+        {view === 'rankings' && <RankingWorkspace mode="boards" />}
+        {view === 'profitBreakdown' && <RankingWorkspace mode="breakdown" />}
         {view !== 'projects' && (error || projectError) && <div className="error-banner" role="alert">{error || projectError}<button onClick={() => { void refresh(); void refreshProjects(); }}>重试</button></div>}
         {view === 'library' && <>
           <div className="page-heading"><div><span className="eyebrow">GAME DATABASE / 01</span><h1>游戏情报库</h1><p>集中查看游戏资料、市场信号与产品定位</p></div>{canWrite && <div className="heading-actions">{user?.role === 'admin' && <button className="secondary-button" onClick={() => void syncNow()} disabled={syncStatus?.running}><RefreshCw size={17} /> {syncStatus?.running ? '同步中' : '立即同步'}</button>}<label className="secondary-button import-button"><Upload size={17} /> 导入 JSON<input type="file" accept="application/json,.json" onChange={event => { const file = event.target.files?.[0]; if (file) void importDocument(file); event.target.value = ''; }} /></label><button className="primary-button" onClick={() => setEditing('new')}><Plus size={18} /> 录入游戏</button></div>}</div>
@@ -290,7 +307,7 @@ export default function App() {
             {Object.entries(syncStatus?.sources || {}).map(([key, source]) =>
               <a key={key} href={source.url} target="_blank" rel="noreferrer"
                 title={source.error || source.warnings?.join('；') || (source.lastSuccessAt ? `最近成功 ${new Date(source.lastSuccessAt).toLocaleString('zh-CN')}` : '')}>
-                {key === 'steam' ? 'Steam' : key === 'apple' ? 'App Store' : key === 'google' ? 'Google Play' : '微信小游戏'} · {source.state === 'error' ? '同步失败' : `${source.state === 'partial' ? '部分成功 · ' : ''}抓取 ${source.fetched || 0} / 新增 ${source.added || 0} / 更新 ${source.updated || 0}`} <ExternalLink size={12} />
+                {key === 'steam' ? 'Steam' : key === 'apple' ? 'App Store' : key === 'google' ? 'Google Play' : key === 'taptap' ? 'TapTap' : '微信小游戏'} · {source.state === 'error' ? '同步失败' : `${source.state === 'partial' ? '部分成功 · ' : ''}抓取 ${source.fetched || 0} / 新增 ${source.added || 0} / 更新 ${source.updated || 0}`} <ExternalLink size={12} />
               </a>)}
             <span title="这些平台已有商品来源链接，但尚未接入稳定自动采集">其他平台：PlayStation、Xbox、Nintendo（手动来源）</span>
             {syncMessage && <span role="status">{syncMessage}</span>}
@@ -306,16 +323,27 @@ export default function App() {
           <div className="data-note">演示记录的指标为样例值。导入样本按来源口径展示；空值表示未取得数据，不等于零。</div>
         </>}
         {view === 'analytics' && <>
-          <div className="page-heading"><div><span className="eyebrow">MARKET INSIGHTS / 02</span><h1>可视化分析</h1><p>从类型、平台和发行时间观察当前情报库</p></div><span className="analysis-stamp">基于 {analysisGames.length} 款非演示游戏</span></div>
-          <div className="insight-strip"><div><span>非演示游戏</span><strong>{analysisGames.length}</strong></div><div><span>Steam 平均好评率</span><strong>{avgRating === null ? '未录入' : `${avgRating}%`}</strong></div><div><span>最多类型</span><strong>{categoryData[0]?.name || '暂无'}</strong></div><div><span>最广平台</span><strong>{platformData[0]?.name || '暂无'}</strong></div></div>
-          <div className="chart-grid live-charts"><section className="chart-panel"><div className="chart-heading"><div><h2><Radio size={16} /> 当前在线排行</h2><p>采集时刻 Steam 在线人数，非历史峰值</p></div><span>实时快照</span></div><div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={playerData} layout="vertical" margin={{ top: 0, right: 18, bottom: 0, left: 20 }}><CartesianGrid stroke="#edf0f2" horizontal={false} /><XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 11 }} /><YAxis dataKey="name" type="category" width={92} tickLine={false} axisLine={false} tick={{ fill: '#4b5660', fontSize: 11 }} /><Tooltip formatter={(value) => Number(value).toLocaleString('zh-CN')} /><Bar dataKey="value" name="当前在线" fill="#38a99c" radius={[0, 4, 4, 0]} barSize={15} /></BarChart></ResponsiveContainer></div></section>
-          <section className="chart-panel"><div className="chart-heading"><div><h2><Newspaper size={16} /> 公告时间窗口</h2><p>Steam 官方公告在不同时间窗口的合计</p></div><span>近一年</span></div><div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={newsWindowData} margin={{ top: 16, right: 16, bottom: 0, left: -10 }}><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="period" tickLine={false} axisLine={false} tick={{ fill: '#68737d', fontSize: 11 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 11 }} /><Tooltip /><Bar dataKey="value" name="公告数" fill="#687dd8" radius={[4, 4, 0, 0]} barSize={34} /></BarChart></ResponsiveContainer></div></section></div>
-          <section className="news-panel"><div className="chart-heading"><div><h2>最新 Steam 公告</h2><p>按发布时间汇总的最新情报</p></div><span>官方来源</span></div><div className="news-list">{recentNews.map(news => <a key={`${news.gameName}-${news.id}`} href={news.url} target="_blank" rel="noreferrer"><div><strong>{news.title}</strong><span>{news.gameName} · {formatDateTime(news.publishedAt)}</span></div><ExternalLink size={15} /></a>)}</div></section>
-          <div className="channel-summary" aria-label="产品分类分布">{['端游', 'App', '小游戏'].map(item => <div key={item}><span>{item}</span><strong>{analysisChannelCounts[item] || 0}</strong><small>款</small></div>)}</div>
+          <div className="page-heading"><div><span className="eyebrow">MARKET INSIGHTS / 02</span><h1>可视化分析</h1><p>按产品分类与来源查看当前情报库</p></div><span className="analysis-stamp">当前范围 {analysisGames.length} 条商品记录</span></div>
+          <div className="analysis-controls">
+            <div className="channel-tabs" role="group" aria-label="分析产品分类">{['全部', '端游', 'App', '小游戏'].map(item => <button key={item} className={analysisChannel === item ? 'selected' : ''} onClick={() => { setAnalysisChannel(item); setAnalysisSource('全部'); }}>{item}<span>{item === '全部' ? allAnalysisGames.length : analysisChannelCounts[item] || 0}</span></button>)}</div>
+            <label>数据来源<select value={analysisSource} onChange={event => setAnalysisSource(event.target.value)}><option value="全部">全部来源</option>{Object.keys(sourceCounts).sort((left, right) => (sourceCounts[right] || 0) - (sourceCounts[left] || 0)).map(item => <option key={item} value={item}>{item} · {sourceCounts[item]}</option>)}</select></label>
+          </div>
+          <div className="insight-strip"><div><span>当前范围</span><strong>{analysisGames.length}</strong></div><div><span>来源数量</span><strong>{new Set(analysisGames.map(sourceName)).size}</strong></div><div><span>最多类型</span><strong>{categoryData[0]?.name || '暂无'}</strong></div><div><span>最多平台</span><strong>{platformData[0]?.name || '暂无'}</strong></div></div>
+          <div className="channel-summary" aria-label="产品分类分布">{['端游', 'App', '小游戏'].map(item => <div key={item}><span>{item}</span><strong>{analysisChannelCounts[item] || 0}</strong><small>条商品记录</small></div>)}</div>
+          <section className="analysis-source-list" aria-label="来源覆盖">{Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).map(([name, count]) => <div key={name}><span>{name}</span><strong>{count.toLocaleString('zh-CN')}</strong></div>)}</section>
+          <div className="analysis-domestic">国内来源：腾讯应用宝微信小游戏 {allAnalysisGames.filter(game => sourceName(game) === '腾讯应用宝').length} 条、TapTap {allAnalysisGames.filter(game => sourceName(game) === 'TapTap').length} 条。抖音小游戏竞品目录和 B 站游戏资料尚未接入，后台运营指标需平台授权。</div>
           <div className="chart-grid"><section className="chart-panel"><div className="chart-heading"><div><h2>游戏类型分布</h2><p>收录最多的 11 类，其余合并展示</p></div><span>分类视角</span></div><div className="chart-box" style={{ height: Math.max(290, categoryChartData.length * 34) }}><ResponsiveContainer width="100%" height="100%"><BarChart data={categoryChartData} layout="vertical" margin={{ top: 0, right: 18, bottom: 0, left: 10 }}><CartesianGrid stroke="#edf0f2" horizontal={false} /><XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 12 }} /><YAxis dataKey="name" type="category" width={92} tickLine={false} axisLine={false} tick={{ fill: '#4b5660', fontSize: 12 }} /><Tooltip cursor={{ fill: '#f6f8f9' }} /><Bar dataKey="value" name="游戏数" radius={[0, 4, 4, 0]} barSize={18}>{categoryChartData.map((item, index) => <Cell key={item.name} fill={palette[index % palette.length]} />)}</Bar></BarChart></ResponsiveContainer></div></section>
           <section className="chart-panel"><div className="chart-heading"><div><h2>平台覆盖</h2><p>单款游戏可计入多个平台</p></div><span>平台视角</span></div><div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={platformData} margin={{ top: 16, right: 16, bottom: 0, left: -20 }}><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fill: '#68737d', fontSize: 12 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 12 }} /><Tooltip cursor={{ fill: '#f6f8f9' }} /><Bar dataKey="value" name="游戏数" fill="#38a99c" radius={[4, 4, 0, 0]} barSize={30} /></BarChart></ResponsiveContainer></div></section>
-          <section className="chart-panel chart-wide"><div className="chart-heading"><div><h2>发行年份趋势</h2><p>按发行年份统计收录产品</p></div><span>时间视角</span></div><div className="chart-box year-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={yearData} margin={{ top: 14, right: 22, bottom: 0, left: -20 }}><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38a99c" stopOpacity={0.24} /><stop offset="100%" stopColor="#38a99c" stopOpacity={0.01} /></linearGradient></defs><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fill: '#68737d', fontSize: 12 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 12 }} /><Tooltip /><Area dataKey="count" name="游戏数" stroke="#279c90" strokeWidth={2.5} fill="url(#areaFill)" /></AreaChart></ResponsiveContainer></div></section></div>
-          <div className="data-note">图表只统计非演示记录。类型和平台数量反映当前选取的样本，不能视为全球市场规模或收入份额；平均好评率只计算有 Steam 评价的记录。</div>
+          {yearData.length > 0 && <section className="chart-panel chart-wide"><div className="chart-heading"><div><h2>发行年份趋势</h2><p>按发行年份统计收录产品</p></div><span>时间视角</span></div><div className="chart-box year-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={yearData} margin={{ top: 14, right: 22, bottom: 0, left: -20 }}><defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#38a99c" stopOpacity={0.24} /><stop offset="100%" stopColor="#38a99c" stopOpacity={0.01} /></linearGradient></defs><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="year" tickLine={false} axisLine={false} tick={{ fill: '#68737d', fontSize: 12 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 12 }} /><Tooltip /><Area dataKey="count" name="游戏数" stroke="#279c90" strokeWidth={2.5} fill="url(#areaFill)" /></AreaChart></ResponsiveContainer></div></section>}</div>
+          {yearData.length === 0 && <div className="data-note">当前范围没有可核验的发行日期，因此不显示发行年份趋势。</div>}
+          {appleRated.length > 0 && <section className="chart-panel analysis-metric-panel"><div className="chart-heading"><div><h2>App Store 美国区五星评分</h2><p>{appleRated.length} 条有评分记录 · 平均 {appleAverage} / 5；评分区间按向上取整展示</p></div><span>iOS 专属口径</span></div><div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={appleRatingData} margin={{ top: 16, right: 16, bottom: 0, left: -10 }}><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="name" tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="value" name="游戏数" fill="#de9b3d" radius={[4, 4, 0, 0]} barSize={34} /></BarChart></ResponsiveContainer></div></section>}
+          {showSteamSignals && liveGames.length > 0 && <>
+            <div className="section-title analysis-steam-heading"><div><h2>Steam 实采信号</h2><p>{liveGames.length} 款游戏 · 最近采集 {formatDateTime(latestCapture)} · 有评价记录 {selectedSteamRated.length} 款，平均好评率 {selectedSteamAverage === null ? '未取得' : `${selectedSteamAverage}%`}</p></div></div>
+            <div className="chart-grid live-charts"><section className="chart-panel"><div className="chart-heading"><div><h2><Radio size={16} /> 当前在线排行</h2><p>采集时刻在线人数，非历史峰值</p></div><span>Steam 快照</span></div><div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={playerData} layout="vertical" margin={{ top: 0, right: 18, bottom: 0, left: 20 }}><CartesianGrid stroke="#edf0f2" horizontal={false} /><XAxis type="number" tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 11 }} /><YAxis dataKey="name" type="category" width={92} tickLine={false} axisLine={false} tick={{ fill: '#4b5660', fontSize: 11 }} /><Tooltip formatter={(value) => Number(value).toLocaleString('zh-CN')} /><Bar dataKey="value" name="当前在线" fill="#38a99c" radius={[0, 4, 4, 0]} barSize={15} /></BarChart></ResponsiveContainer></div></section>
+            <section className="chart-panel"><div className="chart-heading"><div><h2><Newspaper size={16} /> 公告时间窗口</h2><p>Steam 官方公告在不同时间窗口的合计</p></div><span>近一年</span></div><div className="chart-box"><ResponsiveContainer width="100%" height="100%"><BarChart data={newsWindowData} margin={{ top: 16, right: 16, bottom: 0, left: -10 }}><CartesianGrid stroke="#edf0f2" vertical={false} /><XAxis dataKey="period" tickLine={false} axisLine={false} tick={{ fill: '#68737d', fontSize: 11 }} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#8b949c', fontSize: 11 }} /><Tooltip /><Bar dataKey="value" name="公告数" fill="#687dd8" radius={[4, 4, 0, 0]} barSize={34} /></BarChart></ResponsiveContainer></div></section></div>
+            {recentNews.length > 0 && <section className="news-panel"><div className="chart-heading"><div><h2>最新 Steam 公告</h2><p>按发布时间汇总的最新情报</p></div><span>官方来源</span></div><div className="news-list">{recentNews.map(news => <a key={`${news.gameName}-${news.id}`} href={news.url} target="_blank" rel="noreferrer"><div><strong>{news.title}</strong><span>{news.gameName} · {formatDateTime(news.publishedAt)}</span></div><ExternalLink size={15} /></a>)}</div></section>}
+          </>}
+          <div className="data-note">数量是当前收录商品记录，不等于全平台游戏总量或市场份额。同一游戏在不同商店可能分别计数；Steam 好评率与 App Store 五星评分口径不同，不直接比较。</div>
         </>}
         {view === 'catalogCompare' && <>
           <div className="page-heading"><div><span className="eyebrow">PRODUCT COMPARISON / 03</span><h1>产品对比</h1><p>并排查看两款游戏的定位与核心指标</p></div></div>

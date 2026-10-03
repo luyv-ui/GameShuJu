@@ -3,7 +3,7 @@ import { importGames, validateGame } from './store.js';
 const measuredFields = ['price', 'rating', 'reviewCount', 'peakPlayers'];
 const allowedHosts = new Set([
   'store.steampowered.com', 'apps.apple.com', 'play.google.com',
-  'store.playstation.com', 'www.xbox.com', 'www.nintendo.com', 'sj.qq.com'
+  'store.playstation.com', 'www.xbox.com', 'www.nintendo.com', 'sj.qq.com', 'www.taptap.cn'
 ]);
 
 function sourceIdentity(game) {
@@ -75,6 +75,7 @@ export function prepareVerifiedSnapshot(document) {
           if (raw.platforms[0] !== 'iOS' || !raw.metricScope.includes('美国区')) throw new Error('Apple 地区或平台口径无效');
         } else if (raw.sourceExtras !== undefined) throw new Error('非 Apple 来源不能携带 Apple 指标');
         if (url.hostname === 'sj.qq.com' && raw.platforms[0] !== '微信小游戏') throw new Error('小游戏平台口径无效');
+        if (url.hostname === 'www.taptap.cn' && (raw.platforms[0] !== 'Android' || !/^\/app\/\d+$/.test(url.pathname))) throw new Error('TapTap 商品链接或平台口径无效');
         if (url.hostname === 'play.google.com' && raw.platforms[0] !== 'Android') throw new Error('Google Play 平台口径无效');
         if (url.hostname === 'store.playstation.com' && !['PS4', 'PS5'].includes(raw.platforms[0])) throw new Error('PlayStation 平台口径无效');
         if (url.hostname === 'www.xbox.com' && raw.platforms[0] !== 'Xbox') throw new Error('Xbox 平台口径无效');

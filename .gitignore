@@ -12,5 +12,8 @@ data/*.sqlite-wal
 .env
 .env.production
 deploy/production.env
+deploy/ip.env
 deploy/import/
+deploy/secrets/
+data/credentials/
 .DS_Store

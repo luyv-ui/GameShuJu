@@ -5,5 +5,7 @@ data/**
 !data/seed.json
 .env*
 deploy/production.env
+deploy/ip.env
+deploy/secrets
 deploy/import
 *.tsbuildinfo

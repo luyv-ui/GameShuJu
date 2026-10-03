@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 type Role = 'investor' | 'analyst' | 'admin';
-type AuthState = { authenticated: boolean; mode: 'local' | 'external'; user: { id: string; name: string; role: Role } | null; csrfToken: string | null; loginUrl: string | null };
+type AuthState = { authenticated: boolean; mode: 'local' | 'external' | 'accounts'; user: { id: string; name: string; role: Role } | null; csrfToken: string | null; loginUrl: string | null };
 const AuthContext = createContext<AuthState | null>(null);
 let csrfToken: string | null = null;
 
@@ -18,6 +18,33 @@ export function useAuth() {
   return { ...state, canWrite: state.user?.role === 'analyst' || state.user?.role === 'admin', canAdmin: state.user?.role === 'admin' };
 }
 
+function AccountLogin() {
+  const [id, setId] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setBusy(true);
+    try {
+      const response = await fetch('/api/auth/password', { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, password }) });
+      if (!response.ok) throw new Error((await response.json()).error || '登录失败');
+      window.location.reload();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : '登录失败'); }
+    finally { setBusy(false); }
+  }
+  return <div className="auth-screen"><h1>游观</h1><p>登录游戏投资情报工作台</p>
+    <form className="account-login" onSubmit={submit}>
+      <label>账号<input value={id} onChange={event => setId(event.target.value)} autoComplete="username" required /></label>
+      <label>密码<input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" required /></label>
+      {error && <p role="alert">{error}</p>}
+      <button className="primary-button" disabled={busy}>{busy ? '登录中…' : '登录'}</button>
+    </form>
+  </div>;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState | null>(null);
   const [error, setError] = useState('');
@@ -32,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
   if (error) return <div className="auth-screen" role="alert"><h1>连接失败</h1><p>{error}</p><button className="primary-button" onClick={() => window.location.reload()}>重试</button></div>;
   if (!state) return <div className="auth-screen" role="status">正在连接工作空间...</div>;
+  if (!state.authenticated && state.mode === 'accounts') return <AccountLogin />;
   if (!state.authenticated) return <div className="auth-screen"><h1>游观</h1><p>请登录后查看游戏投资情报。</p>{state.loginUrl && <a className="primary-button" href={state.loginUrl}>登录工作空间</a>}</div>;
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }

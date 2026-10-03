@@ -11,6 +11,7 @@ const sourceLinks = {
   steam: 'https://store.steampowered.com/search/',
   apple: 'https://itunes.apple.com/search',
   google: 'https://play.google.com/store/games',
+  taptap: 'https://www.taptap.cn/top/download',
   wechat: 'https://sj.qq.com/wechat-game'
 };
 const genreNames = new Map([
@@ -34,6 +35,7 @@ const googleCategories = [
   ['GAME_ROLE_PLAYING', '角色扮演'], ['GAME_SIMULATION', '模拟经营'],
   ['GAME_SPORTS', '体育'], ['GAME_STRATEGY', '策略']
 ];
+const tapTapBoards = ['/top/download', '/top/played', '/top/new', '/top/reserve'];
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const execFileAsync = promisify(execFile);
 const asDate = value => {
@@ -164,6 +166,53 @@ export async function collectGoogle(asOf, categories = googleCategories) {
   return result;
 }
 
+export async function collectTapTap(asOf, boards = tapTapBoards) {
+  const links = new Map();
+  const warnings = [];
+  for (const board of boards) {
+    try {
+      const $ = load(await fetchText(`https://www.taptap.cn${board}`));
+      const structured = $('script[type="application/ld+json"]').toArray()
+        .map(element => JSON.parse($(element).text()))
+        .find(value => value['@type'] === 'ItemList');
+      if (!structured?.itemListElement?.length) throw new Error('榜单缺少商品列表');
+      for (const entry of structured.itemListElement) {
+        const url = new URL(entry.url);
+        if (url.hostname === 'www.taptap.cn' && /^\/app\/\d+$/.test(url.pathname)) links.set(url.pathname, url.toString());
+      }
+      $('a[href*="/app/"]').each((_, element) => {
+        const url = new URL($(element).attr('href') || '', 'https://www.taptap.cn');
+        if (url.hostname === 'www.taptap.cn' && /^\/app\/\d+$/.test(url.pathname)) links.set(url.pathname, `${url.origin}${url.pathname}`);
+      });
+    } catch (error) { warnings.push(`${board}: ${error.message || error}`); }
+    await pause(200);
+  }
+  const games = [];
+  for (const url of links.values()) {
+    try {
+      const $ = load(await fetchText(url));
+      const details = $('script[type="application/ld+json"]').toArray()
+        .map(element => JSON.parse($(element).text()))
+        .find(value => value['@type'] === 'VideoGame');
+      if (!details?.name || String(details.name).length > 120) throw new Error('商品页缺少有效游戏名');
+      const genre = Array.isArray(details.genre) ? details.genre[0] : details.genre;
+      games.push({
+        channel: 'App', name: details.name, englishName: '',
+        genre: String(genre || '未分类').slice(0, 50), platforms: ['Android'],
+        releaseDate: asDate(details.datePublished), developer: String(details.author?.name || '').slice(0, 120),
+        publisher: '', ...emptyMetrics, tags: Array.isArray(details.genre) ? details.genre.slice(0, 8) : genre ? [genre] : [],
+        description: String(details.description || '').slice(0, 500), steamAppId: null,
+        sourceUrl: url, metricsSourceUrl: '', dataAsOf: asOf,
+        metricScope: 'TapTap 公开榜单及商品页；评分、下载量与收入未采集', isDemo: false
+      });
+    } catch (error) { warnings.push(`${url}: ${error.message || error}`); }
+    await pause(120);
+  }
+  if (!games.length) throw new Error('TapTap 未返回有效游戏');
+  games.warnings = warnings;
+  return games;
+}
+
 export async function collectWechat(asOf, pages = miniPages) {
   const games = new Map();
   for (const page of pages) {
@@ -199,7 +248,7 @@ function saveStatus(file, value) {
   fs.renameSync(temporary, file);
 }
 
-export function createCatalogSync({ collectors = { steam: collectSteam, apple: collectApple, google: collectGoogle, wechat: collectWechat }, now = () => new Date(), file = process.env.CATALOG_SYNC_STATUS_FILE || statusFile } = {}) {
+export function createCatalogSync({ collectors = { steam: collectSteam, apple: collectApple, google: collectGoogle, taptap: collectTapTap, wechat: collectWechat }, now = () => new Date(), file = process.env.CATALOG_SYNC_STATUS_FILE || statusFile } = {}) {
   const status = readStatus(file);
   let running = null;
   async function run() {

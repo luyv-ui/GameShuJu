@@ -14,7 +14,8 @@
     "migrate:sqlite": "node scripts/migrate-to-sqlite.mjs",
     "backup:sqlite": "node scripts/sqlite-backup.mjs backup",
     "restore:sqlite": "node scripts/sqlite-backup.mjs restore",
-    "check:deployment": "node scripts/check-deployment.mjs"
+    "check:deployment": "node scripts/check-deployment.mjs",
+    "create:test-accounts": "node scripts/create-test-accounts.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",

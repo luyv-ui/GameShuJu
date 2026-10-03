@@ -10,12 +10,14 @@ import { getScoreConfig, putScoreConfig } from './score-config.js';
 import { generateInvestmentReport, renderInvestmentReportPdf } from './report.js';
 import { createAuth } from './auth.js';
 import { createCatalogSync } from './catalog-sync.js';
+import { createRankings } from './rankings.js';
 
 const app = express();
 app.use(express.json({ limit: '8mb' }));
 app.use('/api/auth/exchange', express.urlencoded({ extended: false, limit: '4kb' }));
 const auth = createAuth();
 const catalogSync = createCatalogSync();
+const rankings = createRankings();
 auth.routes(app);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -31,6 +33,10 @@ app.get('/api/bot/status', (req, res) => {
   res.json(getDingTalkBotStatus());
 });
 app.get('/api/catalog-sync', auth.read, (req, res) => res.json(catalogSync.getStatus()));
+app.get('/api/rankings', auth.read, async (req, res) => {
+  try { res.json(await rankings.get(req.query.refresh === '1')); }
+  catch { res.status(502).json({ error: '榜单暂时无法获取' }); }
+});
 app.post('/api/catalog-sync', auth.admin, (req, res) => {
   if (catalogSync.getStatus().running) return res.status(409).json({ error: '同步正在进行' });
   void catalogSync.run().catch(error => console.error('Catalog sync failed:', error));

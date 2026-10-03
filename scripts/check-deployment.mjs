@@ -2,7 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
 
-export async function checkDeployment(baseUrl, fetcher = fetch) {
+export async function checkDeployment(baseUrl, expectedMode = 'external', fetcher = fetch) {
   const base = new URL(baseUrl);
   if (base.protocol !== 'https:' && !(base.protocol === 'http:' && loopback.has(base.hostname))) {
     throw new Error('团队访问地址必须使用 HTTPS');
@@ -14,11 +14,18 @@ export async function checkDeployment(baseUrl, fetcher = fetch) {
   const me = await request('/api/auth/me');
   if (me.status !== 200) throw new Error('身份状态接口不可用');
   const identity = await me.json();
-  if (identity.mode !== 'external' || identity.authenticated !== false) {
-    throw new Error('团队环境必须启用外部组织登录，且新访客不能自动登录');
+  if (identity.mode !== expectedMode || identity.authenticated !== false) {
+    throw new Error(`身份模式应为 ${expectedMode}，且新访客不能自动登录`);
   }
   const protectedResponse = await request('/api/projects');
   if (protectedResponse.status !== 401) throw new Error('未登录访问业务接口未被拒绝');
+
+  if (expectedMode === 'accounts') {
+    const invalid = await request('/api/auth/password', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'invalid-account', password: 'invalid-password' }) });
+    if (invalid.status !== 401) throw new Error('错误账号未被拒绝');
+    return { health: 'ok', anonymous: 'blocked', login: 'accounts' };
+  }
 
   const login = await request('/api/auth/login');
   if (login.status !== 302) throw new Error('组织登录跳转不可用');
@@ -36,10 +43,14 @@ export async function checkDeployment(baseUrl, fetcher = fetch) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const url = process.argv[2];
   if (!url) {
-    console.error('用法: npm run check:deployment -- https://团队域名');
+    console.error('用法: npm run check:deployment -- https://团队地址 [--mode accounts]');
     process.exitCode = 1;
   } else {
-    try { console.log(JSON.stringify(await checkDeployment(url))); }
+    try {
+      const mode = process.argv[3] === '--mode' ? process.argv[4] : 'external';
+      if (!['external', 'accounts'].includes(mode)) throw new Error('模式须为 external 或 accounts');
+      console.log(JSON.stringify(await checkDeployment(url, mode)));
+    }
     catch (error) { console.error(error.message); process.exitCode = 1; }
   }
 }
