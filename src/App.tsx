@@ -13,6 +13,8 @@ import { apiUrl } from './api-url';
 
 type View = 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare' | 'rankings' | 'profitBreakdown';
 type CatalogSyncStatus = { running?: boolean; finishedAt?: string; sources?: Record<string, { url: string; state: string; lastSuccessAt?: string; fetched?: number; added?: number; updated?: number; error?: string; warnings?: string[] }> };
+type RankingMatch = { platform: string; board: string; rank: number };
+type RankingResponse = { platforms?: Record<string, { label?: string; boards?: Record<string, { label?: string; items?: Array<{ rank: number; url: string }> }> }> };
 const initialParams = new URLSearchParams(window.location.search);
 const requestedView = initialParams.get('view');
 const initialView: View = requestedView && ['dashboard', 'projects', 'benchmark', 'risks', 'library', 'analytics', 'catalogCompare', 'rankings', 'profitBreakdown'].includes(requestedView)
@@ -48,6 +50,32 @@ function sourceName(game: Game) {
   return game.sourceUrl ? '其他来源' : '未录入';
 }
 function isSteamRecord(game: Game) { return sourceName(game) === 'Steam'; }
+
+function rankingKey(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host === 'sj.qq.com') {
+      const id = parsed.pathname.match(/\/appdetail\/(wx[0-9a-f]{16})/i)?.[1];
+      return id ? `wechat:${id.toLowerCase()}` : '';
+    }
+    if (host === 'apps.apple.com') {
+      const id = parsed.pathname.match(/\/id(\d+)/)?.[1];
+      return id ? `apple:${id}` : '';
+    }
+    if (host === 'www.taptap.cn') {
+      const id = parsed.pathname.match(/^\/app\/(\d+)/)?.[1];
+      return id ? `taptap:${id}` : '';
+    }
+  } catch { /* Invalid source links cannot be associated with a public ranking. */ }
+  return '';
+}
+
+function RankingStatus({ game, matches }: { game: Game; matches: RankingMatch[] }) {
+  if (matches.length) return <div className="catalog-ranking-status">{matches.slice(0, 3).map(match => <span key={`${match.platform}-${match.board}`}>{match.board} #{match.rank}</span>)}</div>;
+  if (rankingKey(game.sourceUrl)) return <span className="catalog-ranking-none">当前未进入公开榜</span>;
+  return <span className="catalog-ranking-unavailable">暂无对应公开榜</span>;
+}
 
 function gameCover(game: Game) {
   return game.steamAppId ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${game.steamAppId}/header.jpg` : '';
@@ -161,6 +189,7 @@ export default function App() {
   const [analysisSource, setAnalysisSource] = useState('全部');
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null);
   const [syncMessage, setSyncMessage] = useState('');
+  const [rankingMatches, setRankingMatches] = useState<Map<string, RankingMatch[]>>(new Map());
 
   async function refresh() {
     try {
@@ -172,6 +201,29 @@ export default function App() {
     finally { setLoading(false); }
   }
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    const loadRankingMatches = async () => {
+      try {
+        const response = await fetch(apiUrl('/api/rankings'));
+        if (!response.ok) return;
+        const data = await response.json() as RankingResponse;
+        const next = new Map<string, RankingMatch[]>();
+        for (const [platformKey, group] of Object.entries(data.platforms || {})) {
+          for (const board of Object.values(group.boards || {})) {
+            for (const item of board.items || []) {
+              const key = rankingKey(item.url);
+              if (!key) continue;
+              const current = next.get(key) || [];
+              current.push({ platform: group.label || platformKey, board: board.label || '公开榜', rank: item.rank });
+              next.set(key, current);
+            }
+          }
+        }
+        setRankingMatches(next);
+      } catch { /* The catalog remains available if ranking sources are temporarily unavailable. */ }
+    };
+    void loadRankingMatches();
+  }, []);
   useEffect(() => {
     if (view !== 'library') return;
     const poll = async () => {
@@ -240,6 +292,7 @@ export default function App() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   const visibleGames = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const rankedGameCount = useMemo(() => games.filter(game => rankingMatches.has(rankingKey(game.sourceUrl))).length, [games, rankingMatches]);
   const channelCounts = useMemo(() => games.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [games]);
   const allAnalysisGames = useMemo(() => games.filter(game => !game.isDemo), [games]);
   const analysisChannelCounts = useMemo(() => allAnalysisGames.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [allAnalysisGames]);
@@ -318,13 +371,14 @@ export default function App() {
             <span title="这些平台已有商品来源链接，但尚未接入稳定自动采集">其他平台：PlayStation、Xbox、Nintendo（手动来源）</span>
             {syncMessage && <span role="status">{syncMessage}</span>}
           </div>
+          <div className="catalog-ranking-note"><strong>榜单关联</strong><span>已将情报库商品 ID 与公开榜单 ID 对应，当前有 {rankedGameCount} 款进入公开榜；其余显示“当前未进入公开榜”，不再误认为缺少档案。</span></div>
           <div className="stat-grid"><div className="stat"><div className="stat-icon teal"><Gamepad2 size={20} /></div><span>收录游戏</span><strong>{games.length}<small> 款</small></strong><p>覆盖 {genres.length - 1} 个游戏类型</p></div><div className="stat"><div className="stat-icon amber"><SlidersHorizontal size={20} /></div><span>游戏类型</span><strong>{genres.length - 1}<small> 类</small></strong><p>多维度分类检索</p></div><div className="stat"><div className="stat-icon blue"><BarChart3 size={20} /></div><span>平均好评率</span><strong>{avgRating ?? '—'}{avgRating !== null && <small> %</small>}</strong><p>仅非演示且有 Steam 好评率的记录</p></div><div className="stat"><div className="stat-icon coral"><ArrowUpRight size={20} /></div><span>覆盖平台</span><strong>{platforms.length - 1}<small> 个</small></strong><p>按来源已核验的平台</p></div></div>
           <div className="insight-strip"><div><span>Steam 实采游戏</span><strong>{liveGames.length}</strong></div><div><span>当前在线合计</span><strong>{formatNumber(totalCurrentPlayers)}</strong></div><div><span>近90天公告</span><strong>{totalNews90Days}</strong></div><div><span>最近采集</span><strong className="capture-time">{formatDateTime(latestCapture)}</strong></div></div>
           <div className="channel-tabs" role="group" aria-label="产品分类筛选">{['全部', '端游', 'App', '小游戏'].map(item => <button key={item} className={channel === item ? 'selected' : ''} onClick={() => setChannel(item)}>{item}<span>{item === '全部' ? games.length : channelCounts[item] || 0}</span></button>)}</div>
           <div className="section-title"><div><h2>游戏列表</h2><p>浏览和筛选收录的游戏产品</p></div><span className="count-pill">共 {filtered.length} 款</span></div>
           <div className="filters"><div className="search-field"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索游戏、开发商或标签..." aria-label="搜索游戏" />{query && <button onClick={() => setQuery('')} aria-label="清除搜索"><X size={16} /></button>}</div><div className="filter-select"><SlidersHorizontal size={16} /><select value={genre} onChange={e => setGenre(e.target.value)} aria-label="筛选游戏类型">{genres.map(item => <option key={item} value={item}>{item === '全部' ? '全部类型' : item}</option>)}</select></div><div className="filter-select"><select value={platform} onChange={e => setPlatform(e.target.value)} aria-label="筛选平台">{platforms.map(item => <option key={item} value={item}>{item === '全部' ? '全部平台' : item}</option>)}</select></div><div className="filter-select sort-select"><ArrowDownUp size={16} /><select value={sort} onChange={e => setSort(e.target.value)} aria-label="排序"><option value="rating">好评率优先</option><option value="reviews">评价数优先</option><option value="release">最新发行</option><option value="name">名称排序</option></select></div></div>
           <div className="genre-tabs" role="group" aria-label="快捷类型筛选">{genres.slice(0, 7).map(item => <button key={item} className={genre === item ? 'selected' : ''} onClick={() => setGenre(item)}>{item}</button>)}</div>
-          <div className="table-wrap"><table><thead><tr><th>游戏 / 产品</th><th>分类</th><th>类型</th><th>数据来源</th><th>采集日期</th><th>平台</th><th>Steam 好评率</th><th>Steam 人民币售价</th>{canWrite && <th><span className="sr-only">操作</span></th>}</tr></thead><tbody>{visibleGames.map(game => <tr key={game.id} onClick={canWrite ? () => setEditing(game) : undefined}><td><div className="game-cell"><Cover game={game} /><div><strong>{game.name}</strong><small>{game.englishName || game.developer || '未录入英文名'} {game.isDemo && <em>演示</em>}</small></div></div></td><td>{game.channel}</td><td><span className="genre-badge">{game.genre}</span></td><td>{game.sourceUrl ? <a className="catalog-source-link" href={game.sourceUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>{sourceName(game)} <ExternalLink size={12} /></a> : sourceName(game)}</td><td>{game.dataAsOf || '未录入'}</td><td><div className="platforms">{game.platforms.slice(0, 2).map(item => <span key={item}>{item}</span>)}{game.platforms.length > 2 && <span>+{game.platforms.length - 2}</span>}</div></td><td><span className="rating"><span />{isSteamRecord(game) && game.rating !== null ? `${game.rating}%` : '未录入'}</span></td><td className="price">{isSteamRecord(game) ? formatPrice(game.price) : '未录入'}</td>{canWrite && <td><button className="row-action" aria-label={`编辑${game.name}`} onClick={event => { event.stopPropagation(); setEditing(game); }}><ArrowUpRight size={17} /></button></td>}</tr>)}</tbody></table>{!loading && !filtered.length && <div className="empty-state"><Search size={26} /><strong>没有找到匹配的游戏</strong><p>调整关键词或筛选条件后再试</p></div>}{loading && <div className="empty-state">加载中...</div>}</div>
+          <div className="table-wrap"><table><thead><tr><th>游戏 / 产品</th><th>分类</th><th>类型</th><th>数据来源</th><th>当前榜单</th><th>采集日期</th><th>平台</th><th>Steam 好评率</th><th>Steam 人民币售价</th>{canWrite && <th><span className="sr-only">操作</span></th>}</tr></thead><tbody>{visibleGames.map(game => { const matches = rankingMatches.get(rankingKey(game.sourceUrl)) || []; return <tr key={game.id} onClick={canWrite ? () => setEditing(game) : undefined}><td><div className="game-cell"><Cover game={game} /><div><strong>{game.name}</strong><small>{game.englishName || game.developer || '未录入英文名'} {game.isDemo && <em>演示</em>}</small></div></div></td><td>{game.channel}</td><td><span className="genre-badge">{game.genre}</span></td><td>{game.sourceUrl ? <a className="catalog-source-link" href={game.sourceUrl} target="_blank" rel="noreferrer" onClick={event => event.stopPropagation()}>{sourceName(game)} <ExternalLink size={12} /></a> : sourceName(game)}</td><td><RankingStatus game={game} matches={matches} /></td><td>{game.dataAsOf || '未录入'}</td><td><div className="platforms">{game.platforms.slice(0, 2).map(item => <span key={item}>{item}</span>)}{game.platforms.length > 2 && <span>+{game.platforms.length - 2}</span>}</div></td><td><span className="rating"><span />{isSteamRecord(game) && game.rating !== null ? `${game.rating}%` : '未录入'}</span></td><td className="price">{isSteamRecord(game) ? formatPrice(game.price) : '未录入'}</td>{canWrite && <td><button className="row-action" aria-label={`编辑${game.name}`} onClick={event => { event.stopPropagation(); setEditing(game); }}><ArrowUpRight size={17} /></button></td>}</tr>; })}</tbody></table>{!loading && !filtered.length && <div className="empty-state"><Search size={26} /><strong>没有找到匹配的游戏</strong><p>调整关键词或筛选条件后再试</p></div>}{loading && <div className="empty-state">加载中...</div>}</div>
           {filtered.length > pageSize && <div className="pagination"><span>第 {page} / {totalPages} 页，共 {filtered.length} 款</span><div><button disabled={page <= 1} onClick={() => setPage(value => value - 1)}>上一页</button><button disabled={page >= totalPages} onClick={() => setPage(value => value + 1)}>下一页</button></div></div>}
           <div className="data-note">演示记录的指标为样例值。导入样本按来源口径展示；空值表示未取得数据，不等于零。</div>
         </>}

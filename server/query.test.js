@@ -35,6 +35,12 @@ test('search filters product channel independently of genre and platform', () =>
 
 test('bot answer labels demo data and handles empty results', () => {
   assert.match(answerQuery(games, '查询 星露谷'), /演示数据/);
+  assert.match(answerQuery(games, '星露谷好玩吗'), /星露谷物语当前好评率为 98%/);
+  assert.match(answerQuery(games, '星露谷怎么样？'), /星露谷物语当前好评率为 98%/);
+  assert.doesNotMatch(answerQuery(games, '星露谷好玩吗'), /未找到/);
+  assert.match(answerQuery(games, '最近想玩黑神话：悟空，给我看看它的数据'), /当前在线 13,468/);
+  assert.match(answerQuery(games, '朋友推荐了星露谷物语，我想了解一下'), /好评率：98%/);
+  assert.match(answerQuery(games, '星露谷适合休闲玩吗'), /星露谷物语/);
   assert.match(answerQuery(games, '查询 黑神话'), /当前在线 13,468/);
   assert.match(answerQuery(games, '查询 黑神话'), /近90天公告 6 条/);
   assert.match(answerQuery(games, '不存在'), /未找到/);

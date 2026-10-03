@@ -11,6 +11,32 @@ const gameAliases = new Map([
   ['明日方舟终末地', ['arknights: endfield', 'arknights endfield']]
 ]);
 
+function compactName(value) {
+  return String(value || '').toLocaleLowerCase().replace(/[\s·:：—_\-（）()，。！？、；;,.!?]/gu, '');
+}
+
+function mentionedGames(games, input) {
+  const compactInput = compactName(String(input).replace(/@\S+\s*/gu, ''));
+  if (!compactInput) return [];
+  return games.map(game => {
+    const canonicalNames = [game.name, game.englishName].filter(Boolean);
+    const aliases = [...gameAliases.entries()]
+      .filter(([, targets]) => targets.some(target => canonicalNames.some(name => compactName(name).includes(compactName(target)))))
+      .map(([alias]) => alias);
+    const candidates = [...canonicalNames, ...aliases].map(compactName).filter(name => name.length >= 2);
+    let score = Math.max(0, ...candidates.filter(name => compactInput.includes(name)).map(name => name.length));
+    const chineseName = compactName(game.name);
+    if (!score && chineseName.length >= 4) {
+      for (let length = chineseName.length - 1; length >= 3; length--) {
+        if (compactInput.includes(chineseName.slice(0, length))) { score = length; break; }
+      }
+    }
+    return { game, score };
+  }).filter(result => result.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .map(result => result.game);
+}
+
 export function searchGames(games, query = '', genre = '全部', platform = '全部', channel = '全部') {
   const keyword = String(query).trim().toLocaleLowerCase();
   const terms = [keyword, ...(gameAliases.get(keyword) || [])];
@@ -67,6 +93,13 @@ function normalizedRequest(input) {
 function recentReleaseIntent(compact) {
   return /(近期|最近|最新|近一个月|近30天).{0,8}(发布|发行|上线|新游|游戏数据)/u.test(compact)
     || /^(近期发布|最近发布|最新发布|本月新游|新游)$/u.test(compact);
+}
+
+function gameOpinionRequest(text) {
+  const pattern = /(?:这款|这个)?(?:游戏)?(?:好不好玩|好玩吗|怎么样|如何|值不值得玩|值得玩吗|值得入手吗|推荐吗|口碑如何|口碑怎么样|评价如何|评价怎么样)[呢吗啊呀吧]*[\s？?。！!]*$/u;
+  if (!pattern.test(text)) return null;
+  const gameName = text.replace(pattern, '').trim();
+  return gameName || null;
 }
 
 export function rankingQueryType(input = '') {
@@ -151,6 +184,19 @@ export function answerQuery(games, input, options = {}) {
     if (!news.length) return withLink('目前没有已采集的 Steam 公告，请先运行采集任务。');
     return withLink(`最新 Steam 公告：\n${news.map((item, index) => `${index + 1}. ${item.gameName}｜${item.title}\n${item.url}`).join('\n')}`, { view: 'analytics' });
   }
+
+  const opinionGameName = gameOpinionRequest(text);
+  if (opinionGameName) {
+    const match = searchGames(games, opinionGameName)[0] || mentionedGames(games, original)[0];
+    if (!match) return withLink(`未找到“${opinionGameName}”。当前查询只依据已入库数据，未入库内容不会编造。`, { view: 'library', q: opinionGameName });
+    const assessment = match.rating != null
+      ? `从已入库指标看，${match.name}当前好评率为 ${match.rating}%，可作为口碑参考；是否适合你仍取决于个人玩法偏好。`
+      : `情报库中有${match.name}的资料，但暂未取得可用于判断口碑的评分数据。`;
+    return withLink(`${assessment}\n\n${formatGame(match)}`, { view: 'library', q: match.name });
+  }
+
+  const mentioned = mentionedGames(games, original).slice(0, 5);
+  if (mentioned.length) return withLink(mentioned.map(formatGame).join('\n\n'), { view: 'library', q: mentioned[0].name });
 
   const matches = searchGames(games, text).slice(0, 5);
   if (!matches.length) return withLink(`未找到“${text}”。当前查询支持游戏中文别名、商店名称、开发商和标签；未入库数据不会编造。`, { view: 'library', q: text });
