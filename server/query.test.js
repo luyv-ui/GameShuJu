@@ -80,16 +80,3 @@ test('bot answers WeChat mini-game rankings with top games and a matching page l
   assert.match(answer, /view=rankings/);
   assert.match(answer, /board=bestSell/);
 });
-
-test('bot answers Douyin mini-game rankings without mixing WeChat data', () => {
-  const data = { douyinSource: 'MomoRank 抖音小游戏公开榜单', douyinBoards: { bestSell: {
-    fetchedAt: '2026-10-03T09:12:35.408Z', dataDate: '2026-10-03', error: null,
-    items: [{ rank: 1, name: '狱国争霸', developer: '', tags: ['SLG'] }, { rank: 2, name: '疯狂水世界', developer: '', tags: ['模拟经营'] }]
-  } } };
-  const answer = answerRankingQuery(data, '查看抖音小游戏畅销榜', { webUrl: 'https://games.example.com' });
-  assert.match(answer, /抖音小游戏畅销榜/);
-  assert.match(answer, /1\. 狱国争霸/);
-  assert.match(answer, /第三方日更公开 Top 10/);
-  assert.match(answer, /platform=douyin/);
-  assert.match(answer, /board=bestSell/);
-});

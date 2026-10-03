@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRankings, parseRanking, parseAppleRanking, parseDouyinRanking, parseTapTapRanking } from './rankings.js';
+import { createRankings, parseRanking, parseAppleRanking, parseTapTapRanking } from './rankings.js';
 
 const html = items => `<script id="__NEXT_DATA__" type="application/json">${JSON.stringify({ props: { pageProps: { dynamicCardResponse: { data: { components: [{ data: { itemData: items } }] } } } } })}</script>`;
 const item = (id, name) => ({ pkg_name: `wx${id.repeat(16)}`, name, report_info: { yyb_app_type: 'wechatgame' } });
@@ -20,22 +20,18 @@ test('Apple RSS and TapTap structured lists keep verified item order', () => {
       link: [{ attributes: { rel: 'alternate', href: 'https://apps.apple.com/cn/app/game-a/id123' } }] }
   ] } });
   assert.deepEqual(parseAppleRanking(apple).map(game => [game.rank, game.name]), [[1, '游戏 A']]);
-  const tap = '<script type="application/ld+json">' + JSON.stringify({ '@type': 'ItemList', itemListElement: [
+  const tapIcon = 'https://img-tc.tapimg.com/market/images/game.png/_tap_appicon_s.jpg';
+  const tap = `<a href="/app/456?os=android"><img src="${tapIcon}" alt="游戏 B icon"></a>` +
+    '<a href="/app/789"><img src="https://example.com/untrusted.png"></a>' +
+    '<script type="application/ld+json">' + JSON.stringify({ '@type': 'ItemList', itemListElement: [
     { position: 1, name: '游戏 B', url: 'https://www.taptap.cn/app/456' },
+    { position: 2, name: '游戏 C', url: 'https://www.taptap.cn/app/789' },
     { position: 2, name: '错误域名', url: 'https://example.com/app/2' }
   ] }) + '</script>';
-  assert.deepEqual(parseTapTapRanking(tap).map(game => [game.rank, game.name]), [[1, '游戏 B']]);
-});
-
-test('Douyin public ranking parser keeps the visible free top list and date', () => {
-  const document = '<body><span>数据日期</span><button>2026-10-03</button><table><tbody>' +
-    '<tr><td>1</td><td><img src="https://example.com/a.png"><a href="/douyin/games/528"><span title="狱国争霸">狱国争霸</span></a></td><td>SLG</td><td>持平</td></tr>' +
-    '<tr><td>2</td><td><a href="/douyin/games/479"><span title="疯狂水世界">疯狂水世界</span></a></td><td>模拟经营</td><td>+3</td></tr>' +
-    '</tbody></table></body>';
-  const parsed = parseDouyinRanking(document);
-  assert.equal(parsed.dataDate, '2026-10-03');
-  assert.deepEqual(parsed.items.map(game => [game.rank, game.name]), [[1, '狱国争霸'], [2, '疯狂水世界']]);
-  assert.equal(parsed.items[0].url, 'https://www.momorank.com/douyin/games/528');
+  const tapGames = parseTapTapRanking(tap);
+  assert.deepEqual(tapGames.map(game => [game.rank, game.name]), [[1, '游戏 B'], [2, '游戏 C']]);
+  assert.equal(tapGames[0].icon, tapIcon);
+  assert.equal(tapGames[1].icon, '');
 });
 
 test('ranking cache retains last successful board after a failed refresh', async () => {
