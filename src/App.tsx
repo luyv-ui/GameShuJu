@@ -21,6 +21,7 @@ type SteamReview = { id: string; recommended: boolean; text: string; createdAt: 
 type SteamGameDetailData = { appId: number; capturedAt: string; cache?: { state: 'fresh' | 'stale'; savedAt: string }; product: { name: string; shortDescription: string; about: string; headerImage: string; website: string; developers: string[]; publishers: string[]; releaseDate: string; comingSoon: boolean; price: { text: string; originalText?: string; discountPercent: number }; genres: string[]; categories: string[]; platforms: string[]; controllerSupport: string; supportedLanguages: string[]; pcRequirements: { minimum: string; recommended: string }; legalNotice: string; contentNotice: string; screenshots: string[]; recommendationsTotal: number; metacritic: number | null }; reviews: { summary: { total: number; positive: number; negative: number; positivePercent: number | null; score: string }; quality?: { fetched: number | null; valuable: number; filtered: number | null; retentionRate: number | null; filterVersion: number }; items: SteamReview[] }; players: { current: number | null; history: Array<{ capturedAt: string; count: number }> }; sources: { product: string; reviews: string; players: string } };
 const initialParams = new URLSearchParams(window.location.search);
 const requestedView = initialParams.get('view');
+const requestedSteamAppId = Number(initialParams.get('steamAppId'));
 const initialView: View = requestedView && ['steam', 'dashboard', 'projects', 'benchmark', 'risks', 'library', 'analytics', 'catalogCompare', 'rankings', 'profitBreakdown'].includes(requestedView)
   ? requestedView as View : initialParams.get('q') ? 'library' : 'steam';
 const palette = ['#e9a236', '#37a89b', '#687dd8', '#e16f72', '#889db2', '#b37ac5'];
@@ -477,6 +478,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<CatalogSyncStatus | null>(null);
   const [syncMessage, setSyncMessage] = useState('');
   const [rankingMatches, setRankingMatches] = useState<Map<string, RankingMatch[]>>(new Map());
+  const deepLinkHandled = useRef(false);
 
   async function refresh() {
     try {
@@ -488,6 +490,29 @@ export default function App() {
     finally { setLoading(false); }
   }
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    if (deepLinkHandled.current || loading || !Number.isSafeInteger(requestedSteamAppId) || requestedSteamAppId <= 0) return;
+    deepLinkHandled.current = true;
+    const existing = games.find(game => Number(game.steamAppId) === requestedSteamAppId);
+    if (existing) {
+      setViewing(existing);
+      return;
+    }
+    apiFetch(`/api/steam/games/${requestedSteamAppId}`).then(async response => {
+      const detail = await response.json() as SteamGameDetailData & { error?: string };
+      if (!response.ok) throw new Error(detail.error || 'Steam 资料读取失败');
+      setViewing({
+        id: `steam-cache-${detail.appId}`, channel: '端游', name: detail.product.name || String(detail.appId), englishName: detail.product.name || '',
+        genre: detail.product.genres[0] || '未分类', platforms: detail.product.platforms, releaseDate: detail.product.releaseDate,
+        developer: detail.product.developers[0] || '', publisher: detail.product.publishers[0] || '', price: null,
+        rating: detail.reviews.summary.positivePercent, reviewCount: detail.reviews.summary.total, peakPlayers: null,
+        tags: [...detail.product.genres, ...detail.product.categories], description: detail.product.shortDescription, iconUrl: detail.product.headerImage,
+        steamAppId: detail.appId, sourceUrl: detail.sources.product, dataAsOf: detail.capturedAt.slice(0, 10),
+        metricScope: 'Steam 公开商品资料、简体中文评测与在线缓存', isDemo: false,
+        currentPlayers: detail.players.current, steamCapturedAt: detail.capturedAt, hasLiveData: detail.players.current != null
+      });
+    }).catch(() => { /* The filtered library remains visible when a stale deep link is unavailable. */ });
+  }, [games, loading]);
   useEffect(() => {
     const loadRankingMatches = async () => {
       try {

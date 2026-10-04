@@ -43,7 +43,7 @@ test('bot answer labels demo data and handles empty results', () => {
   assert.match(answerQuery(games, '星露谷适合休闲玩吗'), /星露谷物语/);
   assert.match(answerQuery(games, '查询 黑神话'), /当前在线 13,468/);
   assert.match(answerQuery(games, '查询 黑神话'), /近90天公告 6 条/);
-  assert.match(answerQuery(games, '不存在'), /未找到/);
+  assert.match(answerQuery(games, '不存在'), /暂时无法确认/);
   assert.match(answerQuery(games, ''), /查询 黑神话/);
 });
 
@@ -87,6 +87,17 @@ test('bot answers WeChat mini-game rankings with top games and a matching page l
   assert.match(answer, /1\. 三国：冰河时代/);
   assert.match(answer, /view=rankings/);
   assert.match(answer, /board=bestSell/);
+  assert.equal(rankingQueryType('微信小游戏有什么好玩的'), 'popular');
+  assert.equal(rankingQueryType('小游戏有啥好玩的'), 'popular');
+  assert.equal(rankingQueryType('抖音小游戏有什么好玩的'), null);
+});
+
+test('bot distinguishes verified WeChat games from unavailable Douyin mini games', () => {
+  const entries = [{ name: '微信样本', channel: '小游戏', platforms: ['微信小游戏'], tags: [], sourceUrl: 'https://sj.qq.com/appdetail/test' }];
+  const answer = answerQuery(entries, '抖音小游戏有什么好玩的');
+  assert.match(answer, /没有明确标注且可核验的抖音小游戏/);
+  assert.match(answer, /1 款明确来自微信小游戏/);
+  assert.doesNotMatch(answer, /未找到/);
 });
 
 test('bot enriches a Steam game answer from the local detail cache', () => {
@@ -102,13 +113,32 @@ test('bot enriches a Steam game answer from the local detail cache', () => {
     players: { current: 51789, history: [{ capturedAt: '2026-10-03T20:00:00.000Z', count: 40000 }, { capturedAt: '2026-10-03T21:00:00.000Z', count: 60000 }] },
     sources: { product: 'https://store.steampowered.com/app/413150/?l=schinese' }
   };
-  const answer = answerQuery([steamGame], '星露谷配置和口碑怎么样', { getSteamDetail: () => detail });
+  const options = { webUrl: 'https://games.example.com', getSteamDetail: () => detail };
+  const answer = answerQuery([steamGame], '星露谷配置和口碑怎么样', options);
   assert.match(answer, /Steam 情报/);
-  assert.match(answer, /优惠 30%/);
   assert.match(answer, /好评如潮.*218,323 条/s);
-  assert.match(answer, /当前 51,789.*缓存均值 50,000/s);
   assert.match(answer, /有效 2 条.*累计时长中位数 30 小时/s);
   assert.match(answer, /最低配置：需要 2 GB 内存/);
+  assert.doesNotMatch(answer, /玩家在线/);
+  assert.doesNotMatch(answer, /价格：/);
+  assert.match(answer, /steamAppId=413150/);
+
+  const priceAnswer = answerQuery([steamGame], '星露谷多少钱，有折扣吗', options);
+  assert.match(priceAnswer, /价格：\$10\.49.*优惠 30%/s);
+  assert.doesNotMatch(priceAnswer, /评论样本|玩家在线|最低配置/);
+
+  const onlineAnswer = answerQuery([steamGame], '星露谷现在多少人在线', options);
+  assert.match(onlineAnswer, /当前 51,789.*缓存均值 50,000/s);
+  assert.doesNotMatch(onlineAnswer, /价格：|评论样本|最低配置/);
+});
+
+test('bot returns reusable question templates for an unrecognized request', () => {
+  const steam = answerQuery(games, 'Steam 某个不存在的游戏怎么样');
+  assert.match(steam, /可以直接套用/);
+  assert.match(steam, /\[游戏名\]当前在线人数和趋势/);
+  assert.doesNotMatch(steam, /未找到/);
+  const mini = answerQuery(games, '小游戏随便说说');
+  assert.match(mini, /微信小游戏热门榜前五名/);
 });
 
 test('bot reports Steam cache coverage without inventing market data', () => {

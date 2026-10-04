@@ -26,7 +26,7 @@ function mentionedGames(games, input) {
     const candidates = [...canonicalNames, ...aliases].map(compactName).filter(name => name.length >= 2);
     let score = Math.max(0, ...candidates.filter(name => compactInput.includes(name)).map(name => name.length));
     const chineseName = compactName(game.name);
-    if (!score && chineseName.length >= 4) {
+    if (!score && /\p{Script=Han}/u.test(String(game.name || '')) && chineseName.length >= 4) {
       for (let length = chineseName.length - 1; length >= 3; length--) {
         if (compactInput.includes(chineseName.slice(0, length))) { score = length; break; }
       }
@@ -91,31 +91,45 @@ function formatSteamDetail(game, detail, input = '') {
   const genres = (product.genres?.length ? product.genres : [game.genre]).filter(Boolean).slice(0, 4);
   const platforms = (product.platforms?.length ? product.platforms : game.platforms || []).filter(Boolean);
   const makers = [...(product.developers || []), ...(product.publishers || [])].filter((value, index, values) => value && values.indexOf(value) === index).slice(0, 3);
-  const lines = [
-    `${game.name}${productName}｜Steam 情报`,
-    `类型：${genres.join('、') || '未录入'}｜平台：${platforms.join('、') || '未录入'}`,
-    makers.length ? `开发/发行：${makers.join('、')}` : '',
-    `价格：${price}${originalPrice}${discount}｜发售：${product.comingSoon ? '即将推出' : product.releaseDate || game.releaseDate || '未录入'}`,
-    review.positivePercent != null
+  const asksPrice = /(价格|售价|多少钱|折扣|优惠|史低|免费)/u.test(input);
+  const asksReviews = /(好玩|口碑|评价|评测|评论|推荐|值得|入手|怎么样|如何)/u.test(input);
+  const asksOnline = /(在线|人数|玩家数|热度|活跃|峰值|趋势)/u.test(input);
+  const asksConfig = /(配置|电脑|显卡|带得动|最低要求|推荐要求|系统要求)/u.test(input);
+  const asksGameplay = /(玩法|功能|单人|多人|联机|控制器|手柄|内容|简介|讲什么)/u.test(input);
+  const asksProduct = /(开发商|发行商|谁做|平台|类型|发售|发行|上线|什么时候)/u.test(input);
+  const focused = asksPrice || asksReviews || asksOnline || asksConfig || asksGameplay || asksProduct;
+  const showAll = !focused || /(详细|完整|全部|介绍|资料|数据)/u.test(input);
+  const lines = [`${game.name}${productName}｜Steam 情报`];
+  if (showAll || asksProduct || asksGameplay) {
+    lines.push(`类型：${genres.join('、') || '未录入'}｜平台：${platforms.join('、') || '未录入'}`);
+    if (makers.length) lines.push(`开发/发行：${makers.join('、')}`);
+    lines.push(`发售：${product.comingSoon ? '即将推出' : product.releaseDate || game.releaseDate || '未录入'}`);
+  }
+  if (showAll || asksPrice) lines.push(`价格：${price}${originalPrice}${discount}`);
+  if (showAll || asksReviews) {
+    lines.push(review.positivePercent != null
       ? `Steam 口碑：${review.score || '已有评测'}｜好评 ${review.positivePercent}%｜${formatNumber(review.total)} 条简体中文公开评测`
-      : 'Steam 口碑：当前缓存暂无可用评测汇总',
-    product.metacritic != null ? `Metacritic：${product.metacritic}` : '',
-    current != null ? `玩家在线：当前 ${formatNumber(current)}${average != null ? `｜缓存均值 ${formatNumber(average)}` : ''}${peak != null ? `｜缓存峰值 ${formatNumber(peak)}` : ''}${trend ? `｜${trend}` : ''}` : '',
-    samples.length ? `评论样本：有效 ${samples.length} 条｜推荐 ${recommendedSamples} / 不推荐 ${samples.length - recommendedSamples}${playtimeMedian != null ? `｜玩家累计时长中位数 ${playtimeMedian} 小时` : ''}` : '',
-    product.shortDescription ? `简介：${shorten(product.shortDescription)}` : ''
-  ];
-  if (/(配置|电脑|显卡|带得动|最低要求|推荐要求|系统要求)/u.test(input)) {
+      : 'Steam 口碑：当前缓存暂无可用评测汇总');
+    if (product.metacritic != null) lines.push(`Metacritic：${product.metacritic}`);
+    if (samples.length) lines.push(`评论样本：有效 ${samples.length} 条｜推荐 ${recommendedSamples} / 不推荐 ${samples.length - recommendedSamples}${playtimeMedian != null ? `｜玩家累计时长中位数 ${playtimeMedian} 小时` : ''}`);
+  }
+  if ((showAll || asksOnline) && current != null) {
+    lines.push(`玩家在线：当前 ${formatNumber(current)}${average != null ? `｜缓存均值 ${formatNumber(average)}` : ''}${peak != null ? `｜缓存峰值 ${formatNumber(peak)}` : ''}${trend ? `｜${trend}` : ''}`);
+  }
+  if ((showAll || asksGameplay || asksReviews) && product.shortDescription) lines.push(`简介：${shorten(product.shortDescription)}`);
+  if (asksConfig || showAll) {
     lines.push(product.pcRequirements?.minimum ? `最低配置：${shorten(product.pcRequirements.minimum, 260)}` : '最低配置：Steam 当前未提供');
     if (product.pcRequirements?.recommended) lines.push(`推荐配置：${shorten(product.pcRequirements.recommended, 260)}`);
   }
-  if (/(玩法|功能|单人|多人|联机|控制器|手柄)/u.test(input) && product.categories?.length) {
+  if ((asksGameplay || showAll) && product.categories?.length) {
     lines.push(`产品功能：${product.categories.slice(0, 8).join('、')}`);
   }
-  lines.push(
-    detail.capturedAt ? `数据采集：${formatDateTime(detail.capturedAt)}` : '',
-    '口径：价格为采集区服商店价；在线趋势来自缓存时段，不代表销量或独立用户。',
-    detail.sources?.product || game.sourceUrl ? `来源：${detail.sources?.product || game.sourceUrl}` : ''
-  );
+  lines.push(detail.capturedAt ? `数据采集：${formatDateTime(detail.capturedAt)}` : '');
+  const scope = [];
+  if (showAll || asksPrice) scope.push('价格为采集区服商店价');
+  if (showAll || asksOnline) scope.push('在线趋势来自缓存时段，不代表销量或独立用户');
+  if (scope.length) lines.push(`口径：${scope.join('；')}。`);
+  if (detail.sources?.product || game.sourceUrl) lines.push(`来源：${detail.sources?.product || game.sourceUrl}`);
   return lines.filter(Boolean).join('\n');
 }
 
@@ -172,11 +186,45 @@ function gameOpinionRequest(text) {
   return gameName || null;
 }
 
+function queryHelp(input, query = '') {
+  const compact = String(input || '').replace(/\s+/gu, '');
+  if (/steam/i.test(compact)) return [
+    query ? `暂时无法确认“${query}”对应哪款已入库 Steam 游戏。` : '请在问题中带上具体游戏名称。',
+    '可以直接套用：',
+    '• [游戏名]现在多少钱，有折扣吗？',
+    '• [游戏名]当前在线人数和趋势怎么样？',
+    '• [游戏名]口碑怎么样，值得玩吗？',
+    '• [游戏名]最低配置是什么？',
+    '• 详细介绍一下[游戏名]的 Steam 数据',
+    '示例：星露谷物语当前在线人数和口碑怎么样？'
+  ].join('\n');
+  if (/小游戏|微信|抖音/u.test(compact)) return [
+    '暂时没有识别到具体的小游戏查询目标。',
+    '可以直接套用：',
+    '• 微信小游戏热门榜前五名',
+    '• 微信小游戏畅销榜有哪些游戏？',
+    '• [小游戏名称]是什么类型？',
+    '• 查询[小游戏名称]的开发商和来源',
+    '示例：微信小游戏有什么好玩的？'
+  ].join('\n');
+  return [
+    query ? `暂时无法确认“${query}”对应哪款已入库游戏。` : '请补充游戏名称或要查询的数据。',
+    '可以直接套用：',
+    '• 查询[游戏名]',
+    '• [游戏名]好玩吗？',
+    '• [游戏名]多少钱/多少人在线/需要什么配置？',
+    '• 最近发布的游戏有哪些？',
+    '• 微信小游戏畅销榜前五名'
+  ].join('\n');
+}
+
 export function rankingQueryType(input = '') {
   const compact = String(input).replace(/@\S+\s*/gu, '').replace(/[\s，。！？、：:；;]/gu, '');
+  if (/抖音/u.test(compact)) return null;
   const hasRankingWord = /(榜|排名|前几|第一|最热|热门新游)/u.test(compact);
+  const hasRecommendationWord = /(好玩|推荐|玩什么|有哪些|有啥|有什么)/u.test(compact);
   const hasWechatScope = /(微信|小游戏)/u.test(compact);
-  if (!hasRankingWord || !hasWechatScope) return null;
+  if ((!hasRankingWord && !hasRecommendationWord) || !hasWechatScope) return null;
   if (/(畅销|氪金|吸金|收入)/u.test(compact)) return 'bestSell';
   if (/(新游|新上线|最新)/u.test(compact)) return 'new';
   return 'popular';
@@ -213,6 +261,9 @@ export function answerRankingQuery(data, input, options = {}) {
 export function answerQuery(games, input, options = {}) {
   const { original, text, compact } = normalizedRequest(input);
   const withLink = (content, params) => appendWebLink(content, options.webUrl, params);
+  const gameLink = game => ({ view: 'library', q: game.name, steamAppId: game.steamAppId ? String(game.steamAppId) : '' });
+  let mentionedCache;
+  const getMentioned = () => mentionedCache || (mentionedCache = mentionedGames(games, original));
   const detailFor = game => {
     if (!game?.steamAppId || typeof options.getSteamDetail !== 'function') return null;
     try { return options.getSteamDetail(game.steamAppId) || null; }
@@ -225,10 +276,23 @@ export function answerQuery(games, input, options = {}) {
   }
 
   if (/抖音.*小游戏|小游戏.*抖音/u.test(compact)) {
-    return withLink('当前运行库没有可核验的抖音小游戏榜单数据，因此无法确认畅销榜或热门榜排名。现有 App 和 Steam 数据不能替代抖音小游戏数据。', { view: 'library', channel: '小游戏' });
+    const douyinGames = games.filter(game => game.channel === '小游戏' && /抖音|douyin|字节|bytedance/u.test([
+      ...(game.platforms || []), ...(game.tags || []), game.metricScope || '', game.sourceUrl || ''
+    ].join(' ').toLocaleLowerCase()));
+    if (douyinGames.length) {
+      const items = douyinGames.slice(0, 5).map((game, index) => `${index + 1}. ${game.name}${game.genre ? `｜${game.genre}` : ''}${game.sourceUrl ? `\n${game.sourceUrl}` : ''}`);
+      return withLink([
+        `当前库内明确标注的抖音小游戏（展示 ${items.length} 款）`,
+        ...items,
+        '',
+        '说明：以上是已入库产品，不代表抖音热门榜或畅销榜排名。'
+      ].join('\n'), { view: 'library', channel: '小游戏' });
+    }
+    const wechatCount = games.filter(game => game.channel === '小游戏' && (game.platforms || []).some(platform => /微信/u.test(platform))).length;
+    return withLink(`当前库里没有明确标注且可核验的抖音小游戏产品或榜单，因此不能推荐或生成排名。现有小游戏中有 ${wechatCount} 款明确来自微信小游戏，不能把它们自动当作抖音版本。`, { view: 'library', channel: '小游戏' });
   }
 
-  if (/steam/i.test(original) && /(数据|覆盖|资料|情况|状态|有什么|多少)/u.test(compact) && typeof options.getSteamOverview === 'function') {
+  if (/steam/i.test(original) && /(数据|覆盖|资料|情况|状态|有什么|多少)/u.test(compact) && !getMentioned().length && typeof options.getSteamOverview === 'function') {
     const overview = options.getSteamOverview();
     const coverage = overview?.coverage || {};
     const leaders = overview?.playerMarket?.onlineLeaders || [];
@@ -255,8 +319,8 @@ export function answerQuery(games, input, options = {}) {
   if (!recentReleaseIntent(compact) && (/(当前在线|在线人数|在线排行|现在.*在线|谁.*最热|最?热门(?:的)?游戏|本周.*热门|最近.*热门|哪些游戏.*热|热度排行)/u.test(compact) || compact === '热门')) {
     const gameQuery = original.replace(/(请问|麻烦|请|帮我|查询|查一下|查|现在|当前|有|多少|人|在线人数|在线|情况|怎么样|？|\?)/gu, '').trim();
     if (gameQuery) {
-      const match = searchGames(games, gameQuery).find(game => game.hasLiveData);
-      if (match) return withLink(format(match), { view: 'library', q: match.name });
+      const match = searchGames(games, gameQuery).find(game => game.hasLiveData || detailFor(game)?.players?.current != null);
+      if (match) return withLink(format(match), gameLink(match));
     }
     const liveGames = games.filter(game => game.hasLiveData && Number.isFinite(Number(game.currentPlayers)))
       .sort((left, right) => Number(right.currentPlayers) - Number(left.currentPlayers)).slice(0, 5);
@@ -283,20 +347,20 @@ export function answerQuery(games, input, options = {}) {
 
   const opinionGameName = gameOpinionRequest(text);
   if (opinionGameName) {
-    const match = mentionedGames(games, original)[0] || searchGames(games, opinionGameName)[0];
-    if (!match) return withLink(`未找到“${opinionGameName}”。当前查询只依据已入库数据，未入库内容不会编造。`, { view: 'library', q: opinionGameName });
+    const match = getMentioned()[0] || searchGames(games, opinionGameName)[0];
+    if (!match) return withLink(queryHelp(original, opinionGameName), { view: 'library', q: opinionGameName });
     const steamDetail = detailFor(match);
     const positivePercent = steamDetail?.reviews?.summary?.positivePercent ?? match.rating;
     const assessment = positivePercent != null
       ? `从已入库指标看，${match.name}当前好评率为 ${positivePercent}%，可作为口碑参考；是否适合你仍取决于个人玩法偏好。`
       : `情报库中有${match.name}的资料，但暂未取得可用于判断口碑的评分数据。`;
-    return withLink(`${assessment}\n\n${formatGame(match, steamDetail, original)}`, { view: 'library', q: match.name });
+    return withLink(`${assessment}\n\n${formatGame(match, steamDetail, original)}`, gameLink(match));
   }
 
-  const mentioned = mentionedGames(games, original).slice(0, 5);
-  if (mentioned.length) return withLink(mentioned.map(format).join('\n\n'), { view: 'library', q: mentioned[0].name });
+  const mentioned = getMentioned().slice(0, 5);
+  if (mentioned.length) return withLink(mentioned.map(format).join('\n\n'), gameLink(mentioned[0]));
 
   const matches = searchGames(games, text).slice(0, 5);
-  if (!matches.length) return withLink(`未找到“${text}”。当前查询支持游戏中文别名、商店名称、开发商和标签；未入库数据不会编造。`, { view: 'library', q: text });
-  return withLink(matches.map(format).join('\n\n'), { view: 'library', q: matches[0].name });
+  if (!matches.length) return withLink(queryHelp(original, text), { view: 'library', q: text });
+  return withLink(matches.map(format).join('\n\n'), gameLink(matches[0]));
 }
