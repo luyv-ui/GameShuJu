@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { WheelEvent as ReactWheelEvent } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { ArrowDownUp, ArrowLeftRight, ArrowUpRight, BarChart3, Check, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Database, ExternalLink, Gamepad2, LayoutDashboard, LogOut, Menu, Newspaper, Plus, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trophy, TrendingUp, Trash2, Upload, X } from 'lucide-react';
+import { ArrowDownUp, ArrowLeftRight, ArrowRight, ArrowUpRight, BarChart3, Check, ChevronDown, ChevronRight, CircleHelp, ClipboardList, ExternalLink, Gamepad2, LayoutDashboard, LogOut, Menu, Newspaper, Plus, Radio, RefreshCw, Search, ShieldAlert, SlidersHorizontal, Trophy, TrendingUp, Trash2, Upload, X } from 'lucide-react';
 import type { Game, GameInput, Project } from './types';
 import './catalog.css';
 import ProjectWorkspace from './ProjectWorkspace';
@@ -10,10 +10,13 @@ import InvestmentCompare from './InvestmentCompare';
 import RiskCenter from './RiskCenter';
 import RankingWorkspace from './RankingWorkspace';
 import SteamWorkspace from './SteamWorkspace';
+import MarketOverview from './MarketOverview';
+import GameProfilePage from './GameDetail';
 import { apiFetch, useAuth } from './auth';
 import { apiUrl } from './api-url';
 
-type View = 'steam' | 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'catalogCompare' | 'rankings' | 'profitBreakdown';
+type View = 'steam' | 'market' | 'dashboard' | 'projects' | 'benchmark' | 'risks' | 'library' | 'analytics' | 'game' | 'catalogCompare' | 'rankings' | 'profitBreakdown';
+const validViews: View[] = ['steam', 'market', 'dashboard', 'projects', 'benchmark', 'risks', 'library', 'analytics', 'game', 'catalogCompare', 'rankings', 'profitBreakdown'];
 type CatalogSyncStatus = { running?: boolean; finishedAt?: string; sources?: Record<string, { url: string; state: string; lastSuccessAt?: string; fetched?: number; added?: number; updated?: number; error?: string; warnings?: string[] }> };
 type RankingMatch = { platform: string; board: string; rank: number };
 type RankingResponse = { platforms?: Record<string, { label?: string; boards?: Record<string, { label?: string; items?: Array<{ rank: number; url: string }> }> }> };
@@ -21,8 +24,8 @@ type SteamReview = { id: string; recommended: boolean; text: string; createdAt: 
 type SteamGameDetailData = { appId: number; capturedAt: string; cache?: { state: 'fresh' | 'stale'; savedAt: string }; product: { name: string; shortDescription: string; about: string; headerImage: string; website: string; developers: string[]; publishers: string[]; releaseDate: string; comingSoon: boolean; price: { text: string; originalText?: string; discountPercent: number }; genres: string[]; categories: string[]; platforms: string[]; controllerSupport: string; supportedLanguages: string[]; pcRequirements: { minimum: string; recommended: string }; legalNotice: string; contentNotice: string; screenshots: string[]; recommendationsTotal: number; metacritic: number | null }; reviews: { summary: { total: number; positive: number; negative: number; positivePercent: number | null; score: string }; quality?: { fetched: number | null; valuable: number; filtered: number | null; retentionRate: number | null; filterVersion: number }; items: SteamReview[] }; players: { current: number | null; history: Array<{ capturedAt: string; count: number }> }; sources: { product: string; reviews: string; players: string } };
 const initialParams = new URLSearchParams(window.location.search);
 const requestedView = initialParams.get('view');
-const initialView: View = requestedView && ['steam', 'dashboard', 'projects', 'benchmark', 'risks', 'library', 'analytics', 'catalogCompare', 'rankings', 'profitBreakdown'].includes(requestedView)
-  ? requestedView as View : initialParams.get('q') ? 'library' : 'steam';
+const initialView: View = requestedView && validViews.includes(requestedView as View)
+  ? requestedView as View : initialParams.get('q') ? 'analytics' : 'market';
 const palette = ['#e9a236', '#37a89b', '#687dd8', '#e16f72', '#889db2', '#b37ac5'];
 const emptyGame: GameInput = { channel: '端游', name: '', englishName: '', genre: '', platforms: [], releaseDate: '', developer: '', publisher: '', price: null, rating: null, reviewCount: null, peakPlayers: null, tags: [], description: '', steamAppId: null, sourceUrl: '', isDemo: false };
 
@@ -457,6 +460,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [view, setView] = useState<View>(initialView);
+  const [selectedGameId, setSelectedGameId] = useState(initialParams.get('id') || '');
+  const [analysisSearch, setAnalysisSearch] = useState(initialView === 'analytics' ? initialParams.get('q') || '' : '');
+  const [visibleSearchCount, setVisibleSearchCount] = useState(25);
   const [query, setQuery] = useState(initialParams.get('q') || '');
   const [genre, setGenre] = useState('全部');
   const [channel, setChannel] = useState(initialParams.get('channel') || '全部');
@@ -541,6 +547,16 @@ export default function App() {
     } catch (cause) { setProjectError(cause instanceof Error ? cause.message : '加载项目失败'); }
   }
   useEffect(() => { void refreshProjects(); }, [view]);
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get('view');
+      setView(next && validViews.includes(next as View) ? next as View : 'market');
+      setSelectedGameId(params.get('id') || '');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   async function saveGame(value: GameInput) {
     const response = await apiFetch(editing && editing !== 'new' ? `/api/games/${editing.id}` : '/api/games', { method: editing && editing !== 'new' ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -593,6 +609,13 @@ export default function App() {
   const channelCounts = useMemo(() => games.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [games]);
   const allRealGames = useMemo(() => games.filter(game => !game.isDemo), [games]);
   const allAnalysisGames = allRealGames;
+  const matchingGames = useMemo(() => {
+    const term = analysisSearch.trim().toLocaleLowerCase();
+    if (!term) return [];
+    return games.filter(game => [game.name, game.englishName, game.developer, game.publisher, game.genre, ...game.tags].join(' ').toLocaleLowerCase().includes(term))
+      .sort((left, right) => Number(right.name.toLocaleLowerCase().startsWith(term)) - Number(left.name.toLocaleLowerCase().startsWith(term)) || left.name.localeCompare(right.name, 'zh-CN'));
+  }, [games, analysisSearch]);
+  useEffect(() => { setVisibleSearchCount(25); }, [analysisSearch]);
   const analysisChannelCounts = useMemo(() => allAnalysisGames.reduce<Record<string, number>>((counts, game) => { counts[game.channel] = (counts[game.channel] || 0) + 1; return counts; }, {}), [allAnalysisGames]);
   const channelAnalysisGames = useMemo(() => allAnalysisGames.filter(game => analysisChannel === '全部' || game.channel === analysisChannel), [allAnalysisGames, analysisChannel]);
   const sourceCounts = useMemo(() => channelAnalysisGames.reduce<Record<string, number>>((counts, game) => { const name = sourceName(game); counts[name] = (counts[name] || 0) + 1; return counts; }, {}), [channelAnalysisGames]);
@@ -621,8 +644,29 @@ export default function App() {
     return sum + Number(counts?.[`last${days}Days`] || 0);
   }, 0) }));
   const recentNews = liveGames.flatMap(game => (game.latestSteamNews || []).map(news => ({ ...news, gameName: game.name }))).sort((left, right) => right.publishedAt.localeCompare(left.publishedAt)).slice(0, 8);
-  const nav = (next: View) => { setRequestedProjectId(null); setView(next); setMenuOpen(false); };
-  const openProject = (id: string) => { setRequestedProjectId(id); setView('projects'); setMenuOpen(false); };
+  const nav = (next: View) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', next);
+    url.searchParams.delete('id');
+    url.searchParams.delete('q');
+    window.history.pushState(null, '', url);
+    setRequestedProjectId(null); setView(next); setMenuOpen(false);
+  };
+  const openProject = (id: string) => { nav('projects'); setRequestedProjectId(id); };
+  const openGame = (id: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', 'game');
+    url.searchParams.set('id', id);
+    url.searchParams.delete('q');
+    window.history.pushState({ fromAnalytics: true }, '', url);
+    setSelectedGameId(id);
+    setView('game');
+    window.scrollTo(0, 0);
+  };
+  const backFromGame = () => {
+    if (window.history.state?.fromAnalytics) window.history.back();
+    else nav('analytics');
+  };
 
   return <div className={`app-shell ${view === 'steam' ? 'steam-focused' : ''}`}>
     <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
@@ -632,25 +676,28 @@ export default function App() {
       <nav className="side-nav" aria-label="主导航">
         <span className="nav-caption steam-nav-caption">专项工作台</span>
         <button className={`steam-nav-button ${view === 'steam' ? 'active' : ''}`} onClick={() => nav('steam')}><Gamepad2 size={18} /> Steam 专区</button>
-        <span className="nav-caption">投资研判</span>
+        <span className="nav-caption">一、市场概况</span>
+        <button className={view === 'market' ? 'active' : ''} onClick={() => nav('market')}><BarChart3 size={18} /> 市场概况</button>
+        <span className="nav-caption nav-caption-secondary">二、竞品情报</span>
+        <button className={view === 'analytics' || view === 'game' ? 'active' : ''} onClick={() => nav('analytics')}><BarChart3 size={18} /> 可视化分析</button>
+        <button className={view === 'catalogCompare' ? 'active' : ''} onClick={() => nav('catalogCompare')}><ArrowLeftRight size={18} /> 产品对比</button>
+        <button className={view === 'rankings' ? 'active' : ''} onClick={() => nav('rankings')}><Trophy size={18} /> 游戏榜单</button>
+        <button className={view === 'profitBreakdown' ? 'active' : ''} onClick={() => nav('profitBreakdown')}><TrendingUp size={18} /> 畅销盈利拆解</button>
+        <span className="nav-caption nav-caption-secondary">三、立项和投资研判</span>
         <button className={view === 'dashboard' ? 'active' : ''} onClick={() => nav('dashboard')}><LayoutDashboard size={18} /> 投资总览</button>
         <button className={view === 'projects' ? 'active' : ''} onClick={() => nav('projects')}><ClipboardList size={18} /> 立项项目</button>
         <button className={view === 'benchmark' ? 'active' : ''} onClick={() => nav('benchmark')}><ArrowLeftRight size={18} /> 赛道对标</button>
         <button className={view === 'risks' ? 'active' : ''} onClick={() => nav('risks')}><ShieldAlert size={18} /> 风险监控</button>
-        <span className="nav-caption nav-caption-secondary">竞品情报</span>
-        <button className={view === 'library' ? 'active' : ''} onClick={() => nav('library')}><LayoutDashboard size={18} /> 情报库 <span className="nav-count">{games.length}</span></button>
-        <button className={view === 'analytics' ? 'active' : ''} onClick={() => nav('analytics')}><BarChart3 size={18} /> 可视化分析</button>
-        <button className={view === 'catalogCompare' ? 'active' : ''} onClick={() => nav('catalogCompare')}><ArrowLeftRight size={18} /> 产品对比</button>
-        <button className={view === 'rankings' ? 'active' : ''} onClick={() => nav('rankings')}><Trophy size={18} /> 游戏榜单</button>
-        <button className={view === 'profitBreakdown' ? 'active' : ''} onClick={() => nav('profitBreakdown')}><TrendingUp size={18} /> 畅销盈利拆解</button>
       </nav>
-      <div className="side-bottom"><div className="side-tip"><Database size={17} /><span>本地情报库<small>团队协作数据</small></span></div><div className="side-profile"><span className="profile-avatar">{user?.name.slice(0, 1) || 'DC'}</span><span>{user?.name || '点触科技'}<small>{user?.role === 'admin' ? '管理员' : user?.role === 'analyst' ? '分析师' : '投资人'}</small></span>{mode === 'external' ? <button className="icon-button" title="退出登录" aria-label="退出登录" onClick={() => void logout()}><LogOut size={16} /></button> : <CircleHelp size={16} />}</div></div>
+      <div className="side-bottom"><div className="side-profile"><span className="profile-avatar">{user?.name.slice(0, 1) || 'DC'}</span><span>{user?.name || '点触科技'}<small>{user?.role === 'admin' ? '管理员' : user?.role === 'analyst' ? '分析师' : '投资人'}</small></span>{mode === 'external' ? <button className="icon-button" title="退出登录" aria-label="退出登录" onClick={() => void logout()}><LogOut size={16} /></button> : <CircleHelp size={16} />}</div></div>
     </aside>
     {(menuOpen || view === 'steam') && <button className={`mobile-scrim ${menuOpen ? 'open' : ''}`} aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />}
     <main className="main">
-      <header className="topbar"><div className="top-left"><button className={`icon-button mobile-menu ${view === 'steam' ? 'steam-sidebar-toggle' : ''}`} onClick={() => setMenuOpen(true)} aria-label={view === 'steam' ? '展开原工作台导航' : '打开菜单'}>{view === 'steam' ? <ChevronRight size={18} /> : <Menu size={20} />}</button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{({ steam: 'Steam 专区', dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比', rankings: '游戏榜单', profitBreakdown: '畅销盈利拆解' } as Record<View, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar" title={user?.name}>{user?.name.slice(0, 1) || 'DC'}</span></div></header>
+      <header className="topbar"><div className="top-left"><button className={`icon-button mobile-menu ${view === 'steam' ? 'steam-sidebar-toggle' : ''}`} onClick={() => setMenuOpen(true)} aria-label={view === 'steam' ? '展开原工作台导航' : '打开菜单'}>{view === 'steam' ? <ChevronRight size={18} /> : <Menu size={20} />}</button><span>工作空间</span><span className="breadcrumb-sep">/</span><strong>{view === 'game' ? games.find(game => game.id === selectedGameId)?.name || '游戏详情' : ({ steam: 'Steam 专区', market: '市场概况', dashboard: '投资总览', projects: '立项项目', benchmark: '赛道对标', risks: '风险监控', library: '游戏情报库', analytics: '可视化分析', catalogCompare: '产品对比', rankings: '游戏榜单', profitBreakdown: '畅销盈利拆解' } as Record<Exclude<View, 'game'>, string>)[view]}</strong></div><div className="top-right">{view !== 'projects' && <span className={`top-status ${error || projectError ? 'disconnected' : ''}`}><span /> {error || projectError ? '连接失败' : loading ? '连接中' : '数据已连接'}</span>}<span className="top-avatar" title={user?.name}>{user?.name.slice(0, 1) || 'DC'}</span></div></header>
       <div className="content">
         {view === 'steam' && <SteamWorkspace games={games} syncStatus={syncStatus} syncMessage={syncMessage} canSync={canWrite && user?.role === 'admin'} onSync={syncNow} onOpenGame={setViewing} />}
+        {view === 'market' && <MarketOverview />}
+        {view === 'game' && <GameProfilePage game={games.find(game => game.id === selectedGameId)} loading={loading} onBack={backFromGame} />}
         {view === 'dashboard' && <InvestmentDashboard projects={projects} games={games} onOpenProject={openProject} onOpenRiskCenter={() => nav('risks')} />}
         {view === 'projects' && <ProjectWorkspace initialSelectedId={requestedProjectId} onOpenBenchmark={() => nav('benchmark')} />}
         {view === 'benchmark' && <InvestmentCompare projects={projects} games={games} onOpenProject={openProject} />}
@@ -685,6 +732,7 @@ export default function App() {
         </>}
         {view === 'analytics' && <>
           <div className="page-heading"><div><span className="eyebrow">MARKET INSIGHTS / 02</span><h1>可视化分析</h1><p>按产品分类与来源查看当前情报库</p></div><span className="analysis-stamp">当前范围 {analysisGames.length} 条商品记录</span></div>
+          <section className="analysis-search-section" aria-label="搜索游戏档案"><div className="analysis-search-head"><h2>搜索游戏档案</h2><span>覆盖全部 {games.length.toLocaleString('zh-CN')} 条记录</span></div><div className="search-field"><Search size={17} /><input value={analysisSearch} onChange={event => setAnalysisSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && matchingGames[0]) openGame(matchingGames[0].id); if (event.key === 'Escape') setAnalysisSearch(''); }} placeholder="输入游戏名称、开发商、类型或标签" aria-label="搜索情报库所有游戏" />{analysisSearch && <button onClick={() => setAnalysisSearch('')} aria-label="清除搜索"><X size={16} /></button>}</div>{analysisSearch.trim() && <div className="analysis-search-results">{matchingGames.slice(0, visibleSearchCount).map(game => <button key={game.id} className="analysis-search-result" onClick={() => openGame(game.id)}><span><strong>{game.name}</strong><small>{game.englishName || game.developer || game.genre}</small></span><span>{game.channel} · {sourceName(game)}</span><ArrowRight size={15} /></button>)}{!matchingGames.length && <div className="ranking-empty">没有找到匹配的游戏</div>}<p className="analysis-search-count">找到 {matchingGames.length} 条，已显示 {Math.min(matchingGames.length, visibleSearchCount)} 条</p>{matchingGames.length > visibleSearchCount && <button className="analysis-search-more" onClick={() => setVisibleSearchCount(count => count + 25)}>显示更多</button>}</div>}</section>
           <div className="analysis-controls">
             <div className="channel-tabs" role="group" aria-label="分析产品分类">{['全部', '端游', 'App', '小游戏'].map(item => <button key={item} className={analysisChannel === item ? 'selected' : ''} onClick={() => { setAnalysisChannel(item); setAnalysisSource('全部'); }}>{item === '全部' ? item : channelLabel(item)}<span>{item === '全部' ? allAnalysisGames.length : analysisChannelCounts[item] || 0}</span></button>)}</div>
             <label>数据来源<select value={analysisSource} onChange={event => setAnalysisSource(event.target.value)}><option value="全部">全部来源</option>{Object.keys(sourceCounts).sort((left, right) => (sourceCounts[right] || 0) - (sourceCounts[left] || 0)).map(item => <option key={item} value={item}>{item} · {sourceCounts[item]}</option>)}</select></label>
